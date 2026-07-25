@@ -1,0 +1,8 @@
+run this in a terminal: 
+docker compose up -d
+
+run this in other terminal to start the BE server:
+php artisan serve 
+
+run this in other terminal to start the FE server: 
+npm run dev 
