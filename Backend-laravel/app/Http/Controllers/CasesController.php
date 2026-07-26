@@ -7,26 +7,6 @@ use Illuminate\Support\Facades\Validator;
 
 class CasesController extends Controller
 {
-    protected array $governments = [
-        'cairo', 'giza', 'alexandria', 'qalyubia', 'port_said', 'suez',
-        'dakahlia', 'sharqia', 'gharbia', 'monufia', 'beheira', 'kafr_el_sheikh',
-        'damietta', 'ismailia', 'fayoum', 'beni_suef', 'minya', 'assiut',
-        'sohag', 'qena', 'luxor', 'aswan', 'red_sea', 'new_valley',
-        'matrouh', 'north_sinai', 'south_sinai', 'outside_egypt',
-    ];
-
-    protected array $bloodGroups = [
-     'A+',
-     'A-',
-     'B+', 
-     'B-', 
-     'AB+', 
-     'AB-', 
-     'O+',
-      'O-'
-      
-      ];
-
 
     // func to return all the cases w all the data of it.
     public function index(Request $request){
@@ -72,18 +52,43 @@ class CasesController extends Controller
     //func to validate the data of the case.
     protected function validateData(Request $request, $caseId = null): array{
         $validator = Validator::make($request->all(), [
-            'mrn' => 'required|string|unique:cases,mrn,' . $caseId,
-            'full_name' => 'required|string|max:255',
-            'gender' => 'required|in:male,female',
-            'national_id' => 'required|digits:14|unique:cases,national_id,' . $caseId,
-            'phone_number' => 'required|digits:11',
-            'government' => 'required|in:' . implode(',', $this->governments),
-            'outside_egypt_details' => 'nullable|required_if:government,outside_egypt|string',
-            'blood_group' => 'required|in:' . implode(',', $this->bloodGroups),
-            'motor_problem' => 'required|in:can_move,cannot_move',
-            'date_of_joining_request' => 'required|date',
-            'cause_of_acceptance' => 'required|in:accepted,not_accepted',
+            // Core demographics
+            'mrn'                     => 'required|string|unique:cases,mrn,' . $caseId,
+            'full_name'               => 'required|string|max:255',
+            'gender'                  => 'required|in:male,female',
+            'national_id'             => 'nullable|string|max:14|unique:cases,national_id,' . $caseId,
+            'date_of_birth'           => 'nullable|date',
+            'age'                     => 'nullable|string',
+            'phone_number'            => 'nullable|string|max:50',
+            'government'              => 'nullable|string',
+            'outside_egypt_details'   => 'nullable|string',
+            'blood_group'             => 'nullable|string|max:10',
+
+            // Motor / Mobility
+            'motor_problem'           => 'nullable|string',
+            'motor_problem_detail'    => 'nullable|string',
+
+            // Dates
+            'date_of_joining_request' => 'nullable|date',
+
+            // Free-text referral reason (was a rigid enum before)
+            'cause_of_acceptance'     => 'nullable|string',
+
+            // Medical & social notes
             'general_medical_history' => 'nullable|string',
+            'social_notes'            => 'nullable|string',
+
+            // Social followup alarm
+            'bas_soc_alarm_active'    => 'nullable|boolean',
+            'bas_soc_alarm_date'      => 'nullable|date',
+            'bas_soc_alarm_note'      => 'nullable|string',
+            'bas_soc_alarm_priority'  => 'nullable|in:red,yellow,blue',
+
+            // Department clinic enrollments & department data
+            'programs'                => 'nullable|array',
+
+            // Research study data
+            'research'                => 'nullable|array',
         ]);
 
         return $validator->validate();

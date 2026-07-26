@@ -7,34 +7,40 @@ return new class extends Migration
 {
     public function up(): void{
 
-        //func will create the columns in the DB after running the migration command.
+        // Creates the cases table in DB with full support for demographics, social notes, alarms, and department programs
         Schema::create('cases', function (Blueprint $table) {
             $table->id();
             $table->string('mrn')->unique();
             $table->string('full_name');
             $table->enum('gender', ['male', 'female']);
-            $table->string('national_id', 14)->unique();
+            $table->string('national_id', 14)->nullable()->unique();
             $table->date('date_of_birth')->nullable();
-            $table->unsignedTinyInteger('age')->nullable();
-            $table->string('phone_number', 11);
-            $table->enum('government', [
-                'cairo', 'giza', 'alexandria', 'qalyubia', 'port_said', 'suez',
-                'dakahlia', 'sharqia', 'gharbia', 'monufia', 'beheira', 'kafr_el_sheikh',
-                'damietta', 'ismailia', 'fayoum', 'beni_suef', 'minya', 'assiut',
-                'sohag', 'qena', 'luxor', 'aswan', 'red_sea', 'new_valley',
-                'matrouh', 'north_sinai', 'south_sinai', 'outside_egypt',
-            ]);
+            $table->string('age')->nullable();
+            $table->string('phone_number', 50)->nullable();
+            $table->string('government')->nullable();
             $table->string('outside_egypt_details')->nullable();
-            $table->enum('blood_group', ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']);
-            $table->enum('motor_problem', ['can_move', 'cannot_move']);
-            $table->date('date_of_joining_request');
-            $table->enum('cause_of_acceptance', ['accepted', 'not_accepted']);
+            $table->string('blood_group', 10)->nullable();
+            $table->string('motor_problem')->nullable();
+            $table->string('motor_problem_detail')->nullable();
+            $table->date('date_of_joining_request')->nullable();
+            $table->text('cause_of_acceptance')->nullable();
             $table->text('general_medical_history')->nullable();
+            $table->text('social_notes')->nullable();
+
+            // Social Followup Alarm fields
+            $table->boolean('bas_soc_alarm_active')->default(false);
+            $table->date('bas_soc_alarm_date')->nullable();
+            $table->string('bas_soc_alarm_note')->nullable();
+            $table->enum('bas_soc_alarm_priority', ['red', 'yellow', 'blue'])->default('red');
+
+            // Department Clinic Enrollments & Department Data JSON
+            $table->json('programs')->nullable();
+            $table->json('research')->nullable();
+
             $table->timestamps();
         });
     }
 
-    //func to rollback from the exestiing migration and delete the table.
     public function down(): void
     {
         Schema::dropIfExists('cases');

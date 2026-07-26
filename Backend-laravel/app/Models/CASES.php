@@ -24,14 +24,26 @@ class CASES extends Model
         'outside_egypt_details',
         'blood_group',
         'motor_problem',
+        'motor_problem_detail',
         'date_of_joining_request',
         'cause_of_acceptance',
         'general_medical_history',
+        'social_notes',
+        'bas_soc_alarm_active',
+        'bas_soc_alarm_date',
+        'bas_soc_alarm_note',
+        'bas_soc_alarm_priority',
+        'programs',
+        'research',
     ];
 
     protected $casts = [
         'date_of_birth' => 'date',
         'date_of_joining_request' => 'date',
+        'bas_soc_alarm_active' => 'boolean',
+        'bas_soc_alarm_date' => 'date',
+        'programs' => 'array',
+        'research' => 'array',
     ];
 
     // funcs to extract the birthday and age automatically from the national id.

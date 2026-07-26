@@ -1,0 +1,91 @@
+#  Master Hub — Root Docker Compose
+#  Runs 4 services:
+#    • db          → MySQL 8.0         (port 3307 on host)
+#    • phpmyadmin  → phpMyAdmin GUI    (port 8080 on host)
+#    • backend     → Laravel API       (port 8000 on host)
+#    • frontend    → React Vite dev    (port 5173 on host)
+
+services:
+  # 1. MySQL Database
+
+  db:
+    image: mysql:8.0
+    container_name: master_hub_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: Master_Hub
+    ports:
+      - "3307:3306"       # host:3307 → container:3306
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - master_hub_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # 2. phpMyAdmin  →  http://localhost:8080
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: master_hub_phpmyadmin
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "8080:80"
+    networks:
+      - master_hub_network
+
+  # 3. Laravel Backend  →  http://localhost:8000
+  backend:
+    build:
+      context: ./Backend-laravel
+      dockerfile: Dockerfile
+    container_name: master_hub_backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount source code for live changes without rebuilding
+      - ./Backend-laravel:/var/www/backend
+      # Exclude vendor and node_modules from the mount (use container's)
+      - /var/www/backend/vendor
+    networks:
+      - master_hub_network
+
+  # 4. React Frontend  →  http://localhost:5173
+  frontend:
+    build:
+      context: ./Frontend-react
+      dockerfile: Dockerfile
+    container_name: master_hub_frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    volumes:
+      # Mount source code for hot reload (Vite watches for changes)
+      - ./Frontend-react:/app/frontend
+      # Exclude node_modules from the mount (use container's)
+      - /app/frontend/node_modules
+    networks:
+      - master_hub_network
+
+# Shared network (all containers talk to each other by service name)
+networks:
+  master_hub_network:
+    driver: bridge
+
+# Persistent volume for MySQL data
+volumes:
+  db_data:
