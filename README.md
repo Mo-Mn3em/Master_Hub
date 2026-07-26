@@ -1,18 +1,18 @@
 # Master_Hub
 
-## 📖 Overview
+## Overview
 **Master Hub** is a full‑stack case‑management system for healthcare professionals. It centralises patient records, admission requests, department‑specific clinic enrollments, research study data, and social‑follow‑up alarms. The stack consists of:
 - **Laravel (PHP 8.3)** backend API
 - **React (Vite, TypeScript)** frontend UI
 - **MySQL 8.0** database with **phpMyAdmin** for inspection
 - A **single Docker Compose** setup that brings up all components with a single command.
 
-## 📦 Prerequisites
+## Prerequisites
 - Docker Desktop (or Docker Engine) installed & running
 - Git (to clone the repository)
 - Optional: a modern browser for the UI and phpMyAdmin
 
-## 🐳 Docker Setup
+## Docker Setup
 The repository ships a `docker-compose.yml` that defines four services:
 1. **db** – MySQL 8.0 (host port `3307`)
 2. **phpmyadmin** – GUI for the database (host port `8080`)
@@ -52,7 +52,7 @@ To run a migration manually (e.g., after editing a migration file):
 docker exec master_hub_backend php artisan migrate
 ```
 
-## 📂 Project Structure
+## Project Structure
 ```
 Master_Hub/
 │   docker-compose.yml          # Orchestrates db, phpmyadmin, backend, frontend
@@ -76,7 +76,7 @@ Master_Hub/
     └─ package.json
 ```
 
-## 🛠️ Backend Details
+## Backend Details
 - **Dockerfile** installs required system libs (`libicu-dev`, `libgd`, etc.) and PHP extensions (`pdo_mysql`, `gd`, `intl`, `mbstring`).
 - **docker-entrypoint.sh** performs the following steps:
   1. Ensures `.env` exists (copies from `.env.example` if missing).
@@ -90,7 +90,7 @@ Master_Hub/
 - **Model** `CASES` now includes the newly added fields (social notes, alarm data, `programs`, `research`, etc.) and proper `$fillable` and `$casts`.
 - **Controller** validation has been expanded to accept all form fields (previous rigid enums replaced with nullable strings/booleans).
 
-## 🎨 Frontend Details
+## Frontend Details
 - **Dockerfile** uses `node:20-alpine`, installs dependencies, and runs `npm run dev -- --host 0.0.0.0`.
 - **vite.config.ts** now contains:
 ```ts
@@ -102,7 +102,7 @@ export default defineConfig({
 - The form (`PatientForm.tsx`) uses a dynamic `localPatient.programs` object; TypeScript errors were fixed by asserting `Record<string, any>` for fallback objects.
 - All new backend fields have matching form inputs (e.g., social notes, alarm date/priority, department‑clinic enrollment fields, research JSON data).
 
-## ✅ Running the Application
+## Running the Application
 1. `docker compose up --build` – builds images and starts containers.
 2. Open a browser:
    - Frontend UI: <http://localhost:5173>
@@ -110,11 +110,11 @@ export default defineConfig({
    - phpMyAdmin: <http://localhost:8080> (login with `root` / `root`)
 3. Use the UI to create/edit patient cases; data is persisted in the MySQL volume `db_data`.
 
-## 🧪 Testing & Linting
+## Testing & Linting
 - **Backend**: `docker exec master_hub_backend php artisan test`
 - **Frontend**: Inside the frontend container you can run `npm run lint` or `npm run test` (if a test suite is added).
 
-## 📚 Further Development
+## Further Development
 - Add Swagger/OpenAPI docs for the Laravel API.
 - Implement authentication (Laravel Sanctum) and protect the API.
 - Extend the frontend with role‑based access controls.
