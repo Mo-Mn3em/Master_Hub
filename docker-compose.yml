@@ -58,9 +58,9 @@ services:
       - "8000:8000"
     volumes:
       # Mount source code for live changes without rebuilding
-      - ./Backend-laravel:/var/www/backend
-      # Exclude vendor and node_modules from the mount (use container's)
-      - /var/www/backend/vendor
+      - ./Backend-laravel:/var/www/backend:cached
+      # Use a named volume for Composer vendor directory (writes inside container)
+      - backend_vendor:/var/www/backend/vendor
     networks:
       - master_hub_network
 
@@ -89,3 +89,4 @@ networks:
 # Persistent volume for MySQL data
 volumes:
   db_data:
+  backend_vendor:
