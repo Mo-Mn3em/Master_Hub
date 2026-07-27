@@ -1,5 +1,5 @@
 # Backend — PHP 8.3 + Laravel (artisan serve)
-FROM php:8.3-cli
+FROM php:8.4-cli
 
 # Install system dependencies + PHP extensions Laravel commonly needs
 RUN apt-get update && apt-get install -y \
