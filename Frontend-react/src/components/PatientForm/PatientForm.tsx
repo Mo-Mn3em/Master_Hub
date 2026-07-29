@@ -307,7 +307,7 @@ export const PatientForm: React.FC = () => {
   };
 
   // 4. Save Submission
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Verification check for Anesthesia unfit reason
@@ -321,7 +321,7 @@ export const PatientForm: React.FC = () => {
     }
 
     // Call Context Save
-    const res = savePatient(localPatient);
+    const res = await savePatient(localPatient);
     if (res.success) {
       setDirty(false);
       setEditingPatientId(null);
