@@ -3,7 +3,6 @@ import { useApp } from '../../context/AppContext';
 import DEPARTMENTS from '../../utils/departmentsData';
 import { 
   Users, 
-  Activity, 
   Calendar, 
   PieChart, 
   Clipboard, 
@@ -46,8 +45,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
       <nav id="sidebar" className={collapsed ? 'collapsed' : ''}>
         {/* Brand/Logo Header */}
         <div className="brand">
-          <div className="brand-icon">
-            <Activity className="w-6 h-6 text-teal-600" />
+          <div className="brand-icon" style={{ padding: 2, background: '#fff', borderRadius: 8, overflow: 'hidden' }}>
+            <img src="/NOH_logo.jpg" alt="NOH Logo" className="w-full h-full object-contain" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 6 }} />
           </div>
           <div className="flex-1 min-w-0">
             <div className="brand-text">Master Hub</div>

@@ -23,19 +23,19 @@ export const Login: React.FC = () => {
       <div className="login-box">
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <div style={{
-            width: 64,
-            height: 64,
+            width: 72,
+            height: 72,
             background: 'white',
             borderRadius: 14,
             display: 'flex',
             alignItems: 'center',
-            justifycontent: 'center',
+            justifyContent: 'center',
             margin: '0 auto 14px',
             overflow: 'hidden',
-            padding: 8,
+            padding: 4,
             boxShadow: '0 4px 10px rgba(0,0,0,0.2)'
           }}>
-            <ShieldAlert className="w-full h-full text-teal-600" />
+            <img src="/NOH_logo.jpg" alt="NOH Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 10 }} />
           </div>
           <h2>Hospital Master Hub</h2>
           <p>Unified Coordinator Portal</p>

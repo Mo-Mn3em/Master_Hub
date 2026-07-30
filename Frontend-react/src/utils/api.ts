@@ -73,3 +73,32 @@ export async function deleteCaseApi(id: string): Promise<void> {
     throw new Error(`Failed to delete case: ${response.statusText}`);
   }
 }
+
+/**
+ * Fetch cases using the backend filter endpoint.
+ * Pass an object with any supported query parameters (search, status, date_from, date_to, etc.).
+ */
+
+export async function fetchFilteredCasesApi(params: Record<string, string | undefined> = {}): Promise<Patient[]> {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== '' && value !== 'all') {
+      query.append(key, value);
+    }
+  });
+  const url = `${API_BASE}/case/filter${query.toString() ? `?${query.toString()}` : ''}`;
+  const response = await fetch(url, {
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch filtered cases: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  const casesList: BackendCase[] = Array.isArray(data) ? data : (data.data || []);
+  return casesList.map(caseFromApi);
+}

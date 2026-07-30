@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { StatCard } from './StatCard';
+import type { Patient } from '../../types';
+import { fetchFilteredCasesApi } from '../../utils/api';
 import { 
   Users, 
   AlertTriangle, 
@@ -40,7 +42,74 @@ export const GlobalDirectory: React.FC = () => {
     setEditingPatientId,
   } = useApp();
 
+  const [filteredPatients, setFilteredPatients] = useState<Patient[]>([]);
+
+  // Pagination helpers (derived from filtered patients)
+  const totalItems = filteredPatients.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+
+  const startIdx = (currentPage - 1) * itemsPerPage;
+  const paginatedPatients = filteredPatients.slice(startIdx, startIdx + itemsPerPage);
   const [deptFilter, setDeptFilter] = useState<string>('all');
+
+  // Fetch cases and apply local/clinical rules filtering
+  useEffect(() => {
+    const query: Record<string, string | undefined> = {};
+    if (searchQuery) query.search = searchQuery;
+
+    fetchFilteredCasesApi(query)
+      .then(fetchedCases => {
+        let result = fetchedCases;
+
+        // 1. Filter Specialty / Department
+        if (deptFilter && deptFilter !== 'all') {
+          result = result.filter(p => p.programs?.[deptFilter]?.enrolled);
+        }
+
+        // 2. Coordinator Alarms
+        if (filterStatus && filterStatus !== 'all') {
+          if (filterStatus === 'stalled') {
+            result = result.filter(p => isPatientStalled(p));
+          } else if (filterStatus === 'vip') {
+            result = result.filter(p => getVIPBadges(p).length > 0);
+          } else if (['red', 'yellow', 'blue'].includes(filterStatus)) {
+            result = result.filter(p => {
+              const alarms = getPatientAlarms(p);
+              return alarms.some(a => a.priority === filterStatus);
+            });
+          }
+        }
+
+        // 3. Surgical Urgency
+        if (filterUrgency && filterUrgency !== 'all') {
+          result = result.filter(p => {
+            const hasSurgery = p.programs?.surg?.enrolled;
+            if (filterUrgency === 'none') {
+              return !hasSurgery;
+            }
+            if (!hasSurgery) return false;
+            // Check surgery priority / urgency field if enrolled
+            const surgPriority = p.programs?.surg?.surgPriority || p.programs?.surg?.priority || '';
+            return surgPriority.toLowerCase() === filterUrgency.toLowerCase();
+          });
+        }
+
+        // 4. Visit Purpose
+        if (filterPurpose && filterPurpose !== 'all') {
+          result = result.filter(p => {
+            if (filterPurpose === 'op') {
+              return !!p.programs?.surg?.enrolled;
+            } else if (filterPurpose === 'followup') {
+              return !p.programs?.surg?.enrolled;
+            }
+            return true;
+          });
+        }
+
+        setFilteredPatients(result);
+      })
+      .catch(err => console.error('Failed to fetch filtered cases', err));
+  }, [searchQuery, filterStatus, filterUrgency, filterPurpose, deptFilter]);
 
   // 1. Calculate operational stats
   const isDeptModule = DEPARTMENTS.some(d => d.code === currentModule);
@@ -63,62 +132,7 @@ export const GlobalDirectory: React.FC = () => {
     return getVIPBadges(p).length > 0;
   }).length;
 
-  // 2. Apply Filters
-  const filteredPatients = activePatients.filter(p => {
-    // Search Query (Name or MRN)
-    const matchesSearch = 
-      p.bas_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.bas_mrn.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    if (!matchesSearch) return false;
 
-    // Specialty surgical clinic filter (Locked if inside a department module)
-    const deptToCheck = isDeptModule ? currentModule : filterPurpose === 'all' ? deptFilter : 'all';
-    if (deptToCheck !== 'all') {
-      if (!p.programs?.[deptToCheck]?.enrolled) return false;
-    }
-
-    // Status Filter (Stalled, VIP, Priorities)
-    if (filterStatus !== 'all') {
-      if (filterStatus === 'stalled') {
-        if (!isPatientStalled(p)) return false;
-      } else if (filterStatus === 'vip') {
-        if (getVIPBadges(p).length === 0) return false;
-      } else {
-        // Alarm priority matching (red, yellow, blue)
-        const alarms = getPatientAlarms(p);
-        const highest = getHighestPriority(alarms);
-        if (highest !== filterStatus) return false;
-      }
-    }
-
-    // Urgency Filter
-    if (filterUrgency !== 'all') {
-      const surgUrgency = p.programs?.surg?.urgency;
-      if (surgUrgency !== filterUrgency) return false;
-    }
-
-    // Purpose Filter (op = scheduled for surgery, followup = enrolled in general clinic)
-    if (filterPurpose !== 'all') {
-      if (filterPurpose === 'op') {
-        if (!p.programs?.surg?.enrolled) return false;
-      } else if (filterPurpose === 'followup') {
-        // Enrolled in at least one program other than surg and anes
-        const hasFollowup = Object.keys(p.programs || {}).some(
-          code => code !== 'surg' && code !== 'anes' && p.programs?.[code]?.enrolled
-        );
-        if (!hasFollowup) return false;
-      }
-    }
-
-    return true;
-  });
-
-  // 3. Paginate Results
-  const totalItems = filteredPatients.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedPatients = filteredPatients.slice(startIndex, startIndex + itemsPerPage);
 
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {

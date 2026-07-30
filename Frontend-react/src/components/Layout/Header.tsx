@@ -63,9 +63,25 @@ export const Header: React.FC<HeaderProps> = ({ collapsed, setCollapsed }) => {
         >
           <Menu className="w-5 h-5" />
         </button>
-        <div>
-          <h1 className="header-title">{title}</h1>
-          <div className="header-subtitle">{subtitle}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <img 
+            src="/NOH_logo.jpg" 
+            alt="NOH Logo" 
+            style={{ 
+              width: 38, 
+              height: 38, 
+              objectFit: 'contain', 
+              borderRadius: 8, 
+              background: '#fff', 
+              padding: 2,
+              boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
+              border: '1px solid var(--border)'
+            }} 
+          />
+          <div>
+            <h1 className="header-title">{title}</h1>
+            <div className="header-subtitle">{subtitle}</div>
+          </div>
         </div>
       </div>
 
