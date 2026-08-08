@@ -19,8 +19,11 @@ import {
   User, 
   Calendar,
   CheckCircle,
-  AlertTriangle
+  AlertTriangle,
+  ShieldCheck,
+  Loader2
 } from 'lucide-react';
+import { verifyPatientNileApi } from '../../utils/api';
 
 export const PatientForm: React.FC = () => {
   const { 
@@ -60,7 +63,91 @@ export const PatientForm: React.FC = () => {
   const [dirty, setDirty] = useState<boolean>(false);
   const [showDirtyWarning, setShowDirtyWarning] = useState<boolean>(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
+  const [verifyingNile, setVerifyingNile] = useState<boolean>(false);
+  const [nileVerificationStatus, setNileVerificationStatus] = useState<{ success: boolean; message: string } | null>(null);
+  const [nileRawResponse, setNileRawResponse] = useState<any>(null);
+  const [showNileRaw, setShowNileRaw] = useState<boolean>(false);
   const formRef = useRef<HTMLFormElement>(null);
+
+  const handleVerifyNilePatient = async () => {
+    const mobile = localPatient.bas_phone || '';
+    const ssn = localPatient.bas_ssn || localPatient.bas_mrn || '';
+    const typeOfId = localPatient.bas_typeOfId || 'SSN';
+
+    if (!mobile && !ssn) {
+      alert('Please enter Mobile Phone Number and Identification Number / SSN to verify.');
+      return;
+    }
+    setVerifyingNile(true);
+    setNileVerificationStatus(null);
+    setNileRawResponse(null);
+
+    try {
+      const res = await verifyPatientNileApi({
+        mobile: mobile,
+        TypeOfIdentification: typeOfId,
+        IdentificationNumber: ssn,
+      });
+
+      console.log('Nile API verification response:', res);
+      setNileRawResponse(res);
+
+      if (res.status === 'success') {
+        const nileStatus = res.data?.status || res.data?.data?.status || '';
+        const pData = res.data?.patientData || res.data?.patientdata || res.data?.data?.patientData || res.data?.data?.patientdata || {};
+
+        const isUnverified = nileStatus === 'unVerified' || nileStatus === 'unverified' || (!pData.patientID && !pData.idNumber && !pData.firstNameAr && !pData.firstNameEn);
+
+        if (isUnverified) {
+          setNileVerificationStatus({
+            success: false,
+            message: 'Patient NOT found in Nile Alamal database (Unverified). Please check Mobile & National ID / SSN.',
+          });
+          return;
+        }
+
+        // Extract fields from Nile patientData structure
+        const nameAr = [pData.firstNameAr, pData.secondNameAr, pData.thirdNameAr, pData.fourthNameAr].filter(Boolean).join(' ');
+        const nameEn = [pData.firstNameEn, pData.secondNameEn, pData.thirdNameEn, pData.fourthNameEn].filter(Boolean).join(' ');
+        const fullName = nameAr || nameEn || pData.fullName || pData.name || '';
+
+        const idNum = pData.idNumber || (pData.patientID ? String(pData.patientID) : '');
+        const genderStr = (pData.gender || '').toString().toLowerCase();
+        const genderVal = genderStr.includes('f') || genderStr.includes('أنثى') ? 'female' :
+                          genderStr.includes('m') || genderStr.includes('ذكر') ? 'male' : '';
+        const dobVal = pData.dateOfBirth ? String(pData.dateOfBirth).split('T')[0] : '';
+        const govVal = pData.address || pData.governorate || pData.nationalityEn || pData.nationalityAr || '';
+
+        setLocalPatient(prev => ({
+          ...prev,
+          bas_name: fullName || prev.bas_name,
+          bas_mrn: idNum || prev.bas_mrn,
+          bas_ssn: idNum || prev.bas_ssn,
+          bas_gender: genderVal || prev.bas_gender,
+          bas_dob: dobVal || prev.bas_dob,
+          bas_gov: govVal || prev.bas_gov,
+        }));
+        setDirty(true);
+
+        setNileVerificationStatus({
+          success: true,
+          message: 'Patient verified successfully in Nile database! Form details auto-filled.',
+        });
+      } else {
+        setNileVerificationStatus({
+          success: false,
+          message: res.message || 'Patient verification failed.',
+        });
+      }
+    } catch (err: any) {
+      setNileVerificationStatus({
+        success: false,
+        message: err.message || 'Verification failed. Please check network/credentials.',
+      });
+    } finally {
+      setVerifyingNile(false);
+    }
+  };
 
   // Initialize form with patient data
   useEffect(() => {
@@ -87,6 +174,8 @@ export const PatientForm: React.FC = () => {
       setLocalPatient({
         bas_name: '',
         bas_mrn: '',
+        bas_ssn: '',
+        bas_typeOfId: 'SSN',
         bas_gender: '',
         bas_dob: '',
         bas_age: 'Unknown',
@@ -671,13 +760,13 @@ export const PatientForm: React.FC = () => {
                 />
                 <div style={{ marginTop: '0.5rem', display: 'flex', gap: '1rem', fontSize: '0.8rem' }}>
                   <label style={{ color: '#C0392B', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <input type="radio" name={`${ap}Priority`} value="red" checked={priority === 'red'} onChange={() => {}} /> Urgent
+                    <input type="radio" id={`${ap}Priority`} name={`${ap}Priority`} value="red" checked={priority === 'red'} onChange={() => {}} /> Urgent
                   </label>
                   <label style={{ color: '#F1C40F', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <input type="radio" name={`${ap}Priority`} value="yellow" checked={priority === 'yellow'} onChange={() => {}} /> Important
+                    <input type="radio" id={`${ap}Priority`} name={`${ap}Priority`} value="yellow" checked={priority === 'yellow'} onChange={() => {}} /> Important
                   </label>
                   <label style={{ color: '#3498DB', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <input type="radio" name={`${ap}Priority`} value="blue" checked={priority === 'blue'} onChange={() => {}} /> Routine
+                    <input type="radio" id={`${ap}Priority`} name={`${ap}Priority`} value="blue" checked={priority === 'blue'} onChange={() => {}} /> Routine
                   </label>
                 </div>
               </div>
@@ -824,6 +913,90 @@ export const PatientForm: React.FC = () => {
                   </div>
                 </div>
 
+                <div className="mb-4 p-4 bg-indigo-50/60 border border-indigo-200 rounded-lg flex flex-col gap-3">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="w-5 h-5 text-indigo-600 shrink-0" />
+                    <div>
+                      <span className="text-sm font-semibold text-slate-800">Nile Alamal API Patient Verification</span>
+                      <p className="text-xs text-slate-500">Provide the patient's Mobile Phone Number and National ID / SSN below to verify against Nile Alamal hospital API</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="form-group">
+                      <label className="text-xs font-medium text-slate-700">Mobile Phone Number *</label>
+                      <input 
+                        type="tel"
+                        id="bas_phone"
+                        placeholder="e.g. 01008365961"
+                        value={localPatient.bas_phone || ''}
+                        onChange={() => {}}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="text-xs font-medium text-slate-700">Type of Identification *</label>
+                      <select
+                        id="bas_typeOfId"
+                        value={localPatient.bas_typeOfId || 'SSN'}
+                        onChange={() => {}}
+                      >
+                        <option value="SSN">SSN (Social Security / National ID)</option>
+                        <option value="NationalID">National ID</option>
+                        <option value="Passport">Passport</option>
+                        <option value="MRN">MRN (Medical Record Number)</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label className="text-xs font-medium text-slate-700">Identification Number / SSN *</label>
+                      <input 
+                        type="text"
+                        id="bas_ssn"
+                        placeholder="e.g. 30002020200712"
+                        value={localPatient.bas_ssn || localPatient.bas_mrn || ''}
+                        onChange={() => {}}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-indigo-100">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleVerifyNilePatient}
+                        disabled={verifyingNile}
+                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-semibold rounded-md shadow-sm transition-colors flex items-center gap-1.5"
+                      >
+                        {verifyingNile ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+                        {verifyingNile ? 'Verifying with Nile...' : 'Verify Patient'}
+                      </button>
+                      {nileRawResponse && (
+                        <button
+                          type="button"
+                          onClick={() => setShowNileRaw(!showNileRaw)}
+                          className="px-2.5 py-1.5 text-xs font-medium border border-slate-300 hover:bg-slate-100 bg-white rounded text-slate-700"
+                        >
+                          {showNileRaw ? 'Hide API Payload' : 'Show API Payload'}
+                        </button>
+                      )}
+                    </div>
+                    {nileVerificationStatus && (
+                      <span className={`text-xs px-3 py-1.5 rounded font-medium flex items-center gap-1.5 ${
+                        nileVerificationStatus.success ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'
+                      }`}>
+                        {nileVerificationStatus.success ? <CheckCircle className="w-4 h-4 text-green-600 shrink-0" /> : <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />}
+                        {nileVerificationStatus.message}
+                      </span>
+                    )}
+                  </div>
+
+                  {showNileRaw && nileRawResponse && (
+                    <div className="mt-2 p-3 bg-slate-900 text-green-400 font-mono text-xs rounded-md overflow-x-auto max-h-60">
+                      <div className="text-slate-400 text-[10px] mb-1 font-sans">// Nile API Raw Response Payload</div>
+                      <pre>{JSON.stringify(nileRawResponse, null, 2)}</pre>
+                    </div>
+                  )}
+                </div>
+
                 <div className="form-grid three">
                   <div className="form-group">
                     <label>Governorate (Location)</label>
@@ -878,6 +1051,7 @@ export const PatientForm: React.FC = () => {
                       <label className="radio-item">
                         <input 
                           type="radio" 
+                          id="bas_motorProblem"
                           name="bas_motorProblem" 
                           value="no" 
                           checked={localPatient.bas_motorProblem === 'no'}
@@ -887,6 +1061,7 @@ export const PatientForm: React.FC = () => {
                       <label className="radio-item">
                         <input 
                           type="radio" 
+                          id="bas_motorProblem"
                           name="bas_motorProblem" 
                           value="yes" 
                           checked={localPatient.bas_motorProblem === 'yes'}

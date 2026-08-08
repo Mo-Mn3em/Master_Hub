@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { Patient, ResearchTemplate, ClinicalLog } from '../types';
-import { fetchCasesApi, createCaseApi, updateCaseApi, deleteCaseApi } from '../utils/api';
+import { fetchCasesApi, createCaseApi, updateCaseApi, deleteCaseApi, loginApi, logoutApi, getToken } from '../utils/api';
 import { isPatientStalled } from '../utils/clinicalRules';
 
 interface AppContextType {
@@ -8,7 +8,6 @@ interface AppContextType {
   researchTemplates: { [id: string]: ResearchTemplate };
   currentModule: string;
   currentUser: string | null;
-  isDevBypass: boolean;
   editingPatientId: string | null;
   currentPage: number;
   itemsPerPage: number;
@@ -30,7 +29,7 @@ interface AppContextType {
   setSearchQuery: (query: string) => void;
   
   // Actions
-  loginDev: () => void;
+  login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   savePatient: (patient: Partial<Patient>) => Promise<{ success: boolean; error?: string; duplicateRestored?: boolean }>;
   archivePatient: (id: string) => Promise<void>;
@@ -70,7 +69,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [researchTemplates, setResearchTemplates] = useState<{ [id: string]: ResearchTemplate }>({});
   const [currentModule, setCurrentModule] = useState<string>('hub');
   const [currentUser, setCurrentUser] = useState<string | null>(null);
-  const [isDevBypass, setIsDevBypass] = useState<boolean>(false);
   const [editingPatientId, setEditingPatientId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage] = useState<number>(15);
@@ -103,13 +101,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   useEffect(() => {
+    // Restore user session if token exists
+    const storedUser = localStorage.getItem('master_hub_user');
+    const token = getToken();
+    if (storedUser && token) {
+      setCurrentUser(storedUser);
+    }
+
     loadPatients();
 
     try {
       const storedTemplates = localStorage.getItem('master_hub_research_templates');
-      const storedUser = localStorage.getItem('master_hub_user');
       const storedLogs = localStorage.getItem('master_hub_logs');
-      const devBypassStatus = localStorage.getItem('master_hub_dev_bypass') === 'true';
 
       if (storedTemplates) {
         setResearchTemplates(JSON.parse(storedTemplates));
@@ -127,11 +130,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setClinicalLogs(initLogs);
         localStorage.setItem('master_hub_logs', JSON.stringify(initLogs));
       }
-
-      if (storedUser) {
-        setCurrentUser(storedUser);
-      }
-      setIsDevBypass(devBypassStatus);
     } catch (e) {
       console.error('Failed to load local config', e);
     }
@@ -164,19 +162,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     saveLogsToStorage(updated);
   };
 
-  const loginDev = () => {
-    setCurrentUser('Coordinator Dr. Gad');
-    setIsDevBypass(true);
-    localStorage.setItem('master_hub_user', 'Coordinator Dr. Gad');
-    localStorage.setItem('master_hub_dev_bypass', 'true');
-    logAction('LOGIN', 'User entered via Offline Developer Access.');
+  const login = async (username: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const user = await loginApi(username, password);
+      setCurrentUser(user.name);
+      localStorage.setItem('master_hub_user', user.name);
+      logAction('LOGIN', `User logged in: ${user.name}`);
+      return { success: true };
+    } catch (e: any) {
+      return { success: false, error: e.message || 'Login failed.' };
+    }
   };
 
   const logout = () => {
+    logoutApi();
     setCurrentUser(null);
-    setIsDevBypass(false);
     localStorage.removeItem('master_hub_user');
-    localStorage.removeItem('master_hub_dev_bypass');
     logAction('LOGOUT', 'User logged out.');
   };
 
@@ -300,7 +301,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         researchTemplates,
         currentModule,
         currentUser,
-        isDevBypass,
         editingPatientId,
         currentPage,
         itemsPerPage,
@@ -320,7 +320,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setFilterPurpose,
         setSearchQuery,
         
-        loginDev,
+        login,
         logout,
         savePatient,
         archivePatient,

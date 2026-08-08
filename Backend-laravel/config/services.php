@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'nile' => [
+        'base_url' => env('NILE_API_BASE_URL', 'http://10.2.2.41/KsiApi'),
+        'username' => env('NILE_API_USERNAME'),
+        'password' => env('NILE_API_PASSWORD'),
+    ],
+
 ];
