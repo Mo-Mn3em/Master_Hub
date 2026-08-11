@@ -52,6 +52,29 @@ To run a migration manually (e.g., after editing a migration file):
 docker exec master_hub_backend php artisan migrate
 ```
 
+## Recent Features & Enhancements
+
+### 🎨 1. Dynamic Case Card Colors & Multi-Alarm Visualization
+- **Clean White Surface Design**: Replaced heavy yellow card fills with clean white surfaces (`#ffffff`) and soft 4px top accent indicator lines.
+- **Dynamic Multi-Alarm Gradients**: Cards with multiple active alarms across different priority levels (`Red`, `Yellow`, `Blue`) automatically convert their top accent bar into a multi-color linear gradient (`linear-gradient(90deg, #ef4444, #f59e0b, #3b82f6)`).
+- **Individual Alarm Badges**: Active alarms inside patient cards render distinct priority pills (`RED`, `YELLOW`, `BLUE`) and color status dots for at-a-glance clinical review.
+
+### 🧭 2. Unified Header & Sidebar UI
+- **Equalized Top Bar Heights**: Aligned the sidebar brand header and main content header heights to create a continuous top horizontal line across the application.
+- **Sidebar & Header Cleanup**: Removed unnecessary close buttons and updated header font weights to normal non-bold (`500`).
+- **Dedicated Clinical Icons**: Added colored Lucide icons for all 18+ specialty programs in the sidebar and top navigation headers using official department brand colors.
+
+### 🔍 3. Filter Bar & Date Range Improvements
+- **"Apply Filter & Sort" Button**: Added a primary clinical teal action button next to **"Reset Filters"**.
+- **Date Range Query Fix**: Updated **REGISTERED FROM** and **REGISTERED TO** filtering across both backend Laravel Eloquent queries and frontend state parsing to check both `created_at` timestamps and `date_of_joining_request`.
+- **Streamlined Filters**: Cleaned up the filter bar layout by removing redundant dropdown options.
+
+### 🖼️ 4. Custom Hospital Favicon
+- Configured custom hospital logo favicons (`/logo.png?v=2`, `/favicon.ico?v=2`) in HTML `<head>` with cache-busting parameters across modern web browsers and mobile devices.
+
+### 🗄️ 5. Dedicated Department Database Tables
+- Architected 20 dedicated department tables (`dept_spinal_surgery`, `dept_cardiac`, `dept_anesthesia`, etc.) and a pure pivot table (`case_department`) with automated Laravel seeders (`TenCasesSeeder.php`).
+
 ## Project Structure
 ```
 Master_Hub/
