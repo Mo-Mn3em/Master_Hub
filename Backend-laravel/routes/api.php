@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Http\Request;
-use App\Models\CASES;
+use App\Models\Cases;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CasesController;
 use App\Http\Controllers\AuthController;

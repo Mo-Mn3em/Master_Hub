@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 
-class CASES extends Model
+class Cases extends Model
 {
     use HasFactory;
 
@@ -29,27 +29,55 @@ class CASES extends Model
         'cause_of_acceptance',
         'general_medical_history',
         'social_notes',
-        'bas_soc_alarm_active',
-        'bas_soc_alarm_date',
-        'bas_soc_alarm_note',
-        'bas_soc_alarm_priority',
+        'social_alarm_active',
+        'social_alarm_date',
+        'social_alarm_note',
+        'social_alarm_priority',
         'programs',
         'research',
     ];
 
     protected $casts = [
-        'date_of_birth' => 'date',
-        'date_of_joining_request' => 'date',
-        'bas_soc_alarm_active' => 'boolean',
-        'bas_soc_alarm_date' => 'date',
-        'programs' => 'array',
-        'research' => 'array',
+        'date_of_birth'            => 'date',
+        'date_of_joining_request'  => 'date',
+        'social_alarm_active'      => 'boolean',
+        'social_alarm_date'        => 'date',
+        'research'                 => 'array',
     ];
 
-    // funcs to extract the birthday and age automatically from the national id.
+    /**
+     * Pure Many-to-Many relationship with Department model via case_department junction table.
+     */
+    public function departments()
+    {
+        return $this->belongsToMany(Department::class, 'case_department', 'case_id', 'department_id')->withTimestamps();
+    }
+
+    // 20 HasOne Relationships to Dedicated Department Tables
+    public function deptAnesthesia()          { return $this->hasOne(Dept\DeptAnesthesia::class, 'case_id'); }
+    public function deptSpinalSurgery()       { return $this->hasOne(Dept\DeptSpinalSurgery::class, 'case_id'); }
+    public function deptHopbe()               { return $this->hasOne(Dept\DeptHopbe::class, 'case_id'); }
+    public function deptCardiac()             { return $this->hasOne(Dept\DeptCardiac::class, 'case_id'); }
+    public function deptColorectal()          { return $this->hasOne(Dept\DeptColorectal::class, 'case_id'); }
+    public function deptOrthopedic()          { return $this->hasOne(Dept\DeptOrthopedic::class, 'case_id'); }
+    public function deptNeurosurgery()        { return $this->hasOne(Dept\DeptNeurosurgery::class, 'case_id'); }
+    public function deptUrology()             { return $this->hasOne(Dept\DeptUrology::class, 'case_id'); }
+    public function deptEnt()                 { return $this->hasOne(Dept\DeptEnt::class, 'case_id'); }
+    public function deptGeneralSurgery()      { return $this->hasOne(Dept\DeptGeneralSurgery::class, 'case_id'); }
+    public function deptMaxillofacial()       { return $this->hasOne(Dept\DeptMaxillofacial::class, 'case_id'); }
+    public function deptReconstructive()      { return $this->hasOne(Dept\DeptReconstructive::class, 'case_id'); }
+    public function deptAbci()                { return $this->hasOne(Dept\DeptAbci::class, 'case_id'); }
+    public function deptHopeStart()           { return $this->hasOne(Dept\DeptHopeStart::class, 'case_id'); }
+    public function deptHypospadias()         { return $this->hasOne(Dept\DeptHypospadias::class, 'case_id'); }
+    public function deptSpinaBifida()         { return $this->hasOne(Dept\DeptSpinaBifida::class, 'case_id'); }
+    public function deptNeurodevelopmental()  { return $this->hasOne(Dept\DeptNeurodevelopmental::class, 'case_id'); }
+    public function deptLiverTransplant()     { return $this->hasOne(Dept\DeptLiverTransplant::class, 'case_id'); }
+    public function deptDental()              { return $this->hasOne(Dept\DeptDental::class, 'case_id'); }
+    public function deptSurgicalList()        { return $this->hasOne(Dept\DeptSurgicalList::class, 'case_id'); }
+
     protected static function booted(): void
     {
-        static::saving(function (CASES $case) {
+        static::saving(function (Cases $case) {
             if ($case->national_id && strlen($case->national_id) === 14) {
                 $dob = self::extractDobFromNationalId($case->national_id);
                 if ($dob) {

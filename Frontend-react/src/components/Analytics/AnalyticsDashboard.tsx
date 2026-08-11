@@ -729,7 +729,7 @@ export const AnalyticsDashboard: React.FC = () => {
       </div>
 
       {/* ── Funnel flow diagram summary ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'white', padding: '14px 24px', borderRadius: '12px', border: '1.5px solid var(--border)', boxShadow: 'var(--shadow-sm)', marginBottom: 24, overflowX: 'auto', gap: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'white', padding: '18px 24px', borderRadius: '16px', border: '1.5px solid var(--border)', boxShadow: 'var(--shadow-sm)', marginBottom: 24, overflowX: 'auto', gap: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontWeight: 700, color: 'var(--text-primary)', fontSize: '13.5px', whiteSpace: 'nowrap' }}>
           <span style={{ background: '#EFF6FF', color: '#2563EB', padding: '6px 10px', borderRadius: '6px' }}>{metrics.totalFirstVisits}</span> Visits
         </div>
@@ -748,10 +748,10 @@ export const AnalyticsDashboard: React.FC = () => {
       </div>
 
       {/* ── Details grids ── */}
-      <div className="form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 20 }}>
+      <div className="form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 24 }}>
         
         {/* Panel 1: Wait Time Averages */}
-        <div style={{ background: 'white', padding: 20, borderRadius: '12px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+        <div style={{ background: 'white', padding: 24, borderRadius: '16px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
           <h3 style={{ marginBottom: 16, color: 'var(--text-secondary)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Wait Time Averages</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 12, borderBottom: '1px dashed var(--border)' }}>
@@ -766,7 +766,7 @@ export const AnalyticsDashboard: React.FC = () => {
         </div>
 
         {/* Panel 2: Acuity & Global Demographics */}
-        <div style={{ background: 'white', padding: 20, borderRadius: '12px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+        <div style={{ background: 'white', padding: 24, borderRadius: '16px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
           <h3 style={{ marginBottom: 16, color: 'var(--text-secondary)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Acuity & Global Demographics</h3>
           <div>
             <div style={{ display: 'flex', width: '100%', height: 10, borderRadius: 5, overflow: 'hidden', marginBottom: 14, background: '#F1F5F9', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.1)' }}>
@@ -812,7 +812,7 @@ export const AnalyticsDashboard: React.FC = () => {
         </div>
 
         {/* Panel 3: Clinical Diagnoses */}
-        <div style={{ background: 'white', padding: 20, borderRadius: '12px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+        <div style={{ background: 'white', padding: 24, borderRadius: '16px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
           <h3 style={{ marginBottom: 16, color: 'var(--text-secondary)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Clinical Diagnoses (Selected Dept)</h3>
           <div>
             {sortedDiagnoses.length > 0 ? (
@@ -831,7 +831,7 @@ export const AnalyticsDashboard: React.FC = () => {
         </div>
 
         {/* Panel 4: Resource Demand forecasting */}
-        <div style={{ background: 'white', padding: 20, borderRadius: '12px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+        <div style={{ background: 'white', padding: 24, borderRadius: '16px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
           <h3 style={{ marginBottom: 16, color: 'var(--text-secondary)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Resource Demand (Active Pipeline)</h3>
           <div>
             <div style={{ marginBottom: 16 }}>
@@ -891,10 +891,10 @@ export const AnalyticsDashboard: React.FC = () => {
       </div>
 
       {/* ── Blockers and Attrition (Cancellations) ── */}
-      <div className="form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 20, marginTop: 24 }}>
+      <div className="form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 24, marginTop: 24 }}>
         
         {/* Bottom Left Panel: Bottlenecks & Blockers */}
-        <div style={{ background: 'white', padding: 20, borderRadius: '12px', border: '1px solid #FECACA', boxShadow: 'var(--shadow-sm)' }}>
+        <div style={{ background: 'white', padding: 24, borderRadius: '16px', border: '1px solid #FECACA', boxShadow: 'var(--shadow-sm)' }}>
           <h3 style={{ marginBottom: 16, color: '#DC2626', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Top Bottlenecks & Blockers</h3>
           <div>
             {sortedBlockers.length > 0 ? (
@@ -920,7 +920,7 @@ export const AnalyticsDashboard: React.FC = () => {
         </div>
 
         {/* Bottom Right Panel: Attrition: Holds, Cancellations & Rejections */}
-        <div style={{ background: 'white', padding: 20, borderRadius: '12px', border: '1px solid #FCD34D', boxShadow: 'var(--shadow-sm)' }}>
+        <div style={{ background: 'white', padding: 24, borderRadius: '16px', border: '1px solid #FCD34D', boxShadow: 'var(--shadow-sm)' }}>
           <h3 style={{ marginBottom: 16, color: '#D97706', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Attrition: Holds, Cancellations & Rejections</h3>
           <div>
             <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>

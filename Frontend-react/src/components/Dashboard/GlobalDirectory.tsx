@@ -13,7 +13,9 @@ import {
   ChevronLeft,
   ChevronRight,
   UserCheck,
-  CalendarCheck
+  CalendarCheck,
+  RotateCcw,
+  Filter
 } from 'lucide-react';
 import { 
   getDynamicAge, 
@@ -51,19 +53,98 @@ export const GlobalDirectory: React.FC = () => {
   const startIdx = (currentPage - 1) * itemsPerPage;
   const paginatedPatients = filteredPatients.slice(startIdx, startIdx + itemsPerPage);
   const [deptFilter, setDeptFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<string>('surgery_asc');
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
+  const [applyCounter, setApplyCounter] = useState<number>(0);
 
-  // Fetch cases and apply local/clinical rules filtering
+  // Sync deptFilter with currentModule if user clicks a clinical program in the sidebar
   useEffect(() => {
-    const query: Record<string, string | undefined> = {};
+    if (DEPARTMENTS.some(d => d.code === currentModule)) {
+      setDeptFilter(currentModule);
+    } else if (currentModule === 'hub') {
+      setDeptFilter('all');
+    }
+  }, [currentModule]);
+
+  const effectiveDept = DEPARTMENTS.some(d => d.code === currentModule) ? currentModule : deptFilter;
+
+  const handleApplyFilters = () => {
+    setCurrentPage(1);
+    setApplyCounter(prev => prev + 1);
+  };
+
+  const handleResetFilters = () => {
+    setSearchQuery('');
+    setFilterStatus('all');
+    setFilterUrgency('all');
+    setFilterPurpose('all');
+    setDeptFilter('all');
+    setSortBy('surgery_asc');
+    setDateFrom('');
+    setDateTo('');
+    setCurrentPage(1);
+    setApplyCounter(prev => prev + 1);
+  };
+
+  const getCardAccentGradient = (alarms: any[], isStalled: boolean) => {
+    if (isStalled) return '#ef4444';
+    if (!alarms || alarms.length === 0) return '#0f766e';
+    
+    const uniquePriorities = Array.from(new Set(alarms.map(a => a.priority)));
+    if (uniquePriorities.length === 1) {
+      const p = uniquePriorities[0];
+      return p === 'red' ? '#ef4444' : p === 'yellow' ? '#f59e0b' : '#3b82f6';
+    }
+    
+    const colorMap: Record<string, string> = {
+      red: '#ef4444',
+      yellow: '#f59e0b',
+      blue: '#3b82f6'
+    };
+    const stops = uniquePriorities.map(p => colorMap[p] || '#0f766e').join(', ');
+    return `linear-gradient(90deg, ${stops})`;
+  };
+
+  const getPatientSurgeryTimestamp = (p: Patient): number => {
+    const dates: number[] = [];
+    if (p.programs) {
+      Object.values(p.programs).forEach((prog: any) => {
+        const dStr = prog.scheduledDate || prog.surgeryBookingDate || prog.reqTargetDate || prog.visit;
+        if (dStr) {
+          const t = new Date(dStr).getTime();
+          if (!isNaN(t)) dates.push(t);
+        }
+      });
+    }
+    return dates.length > 0 ? Math.min(...dates) : Infinity;
+  };
+
+  const getPatientDobTimestamp = (p: Patient): number => {
+    if (p.bas_dob) {
+      const t = new Date(p.bas_dob).getTime();
+      if (!isNaN(t)) return t;
+    }
+    return 0;
+  };
+
+  // Fetch cases and apply local/clinical rules filtering and sorting
+  useEffect(() => {
+    const query: Record<string, string | undefined> = { 
+      sort_by: sortBy,
+      department_code: effectiveDept !== 'all' ? effectiveDept : undefined
+    };
     if (searchQuery) query.search = searchQuery;
+    if (dateFrom) query.date_from = dateFrom;
+    if (dateTo) query.date_to = dateTo;
 
     fetchFilteredCasesApi(query)
       .then(fetchedCases => {
-        let result = fetchedCases;
+        let result = [...fetchedCases];
 
         // 1. Filter Specialty / Department
-        if (deptFilter && deptFilter !== 'all') {
-          result = result.filter(p => p.programs?.[deptFilter]?.enrolled);
+        if (effectiveDept && effectiveDept !== 'all') {
+          result = result.filter(p => p.programs?.[effectiveDept]?.enrolled);
         }
 
         // 2. Coordinator Alarms
@@ -88,7 +169,6 @@ export const GlobalDirectory: React.FC = () => {
               return !hasSurgery;
             }
             if (!hasSurgery) return false;
-            // Check surgery priority / urgency field if enrolled
             const surgPriority = p.programs?.surg?.surgPriority || p.programs?.surg?.priority || '';
             return surgPriority.toLowerCase() === filterUrgency.toLowerCase();
           });
@@ -106,10 +186,54 @@ export const GlobalDirectory: React.FC = () => {
           });
         }
 
+        // 5. Date Range Filtering (if client-side)
+        if (dateFrom) {
+          const fromTime = new Date(dateFrom + 'T00:00:00').getTime();
+          result = result.filter(p => {
+            const dateStr = p.createdAt || p.bas_joinRequestDate;
+            if (!dateStr) return true;
+            const patientTime = new Date(dateStr).getTime();
+            return !isNaN(patientTime) && patientTime >= fromTime;
+          });
+        }
+        if (dateTo) {
+          const toTime = new Date(dateTo + 'T23:59:59').getTime();
+          result = result.filter(p => {
+            const dateStr = p.createdAt || p.bas_joinRequestDate;
+            if (!dateStr) return true;
+            const patientTime = new Date(dateStr).getTime();
+            return !isNaN(patientTime) && patientTime <= toTime;
+          });
+        }
+
+        // 6. Apply Surgery Date & Age Sorting
+        result.sort((a, b) => {
+          if (sortBy === 'surgery_asc') {
+            const surgA = getPatientSurgeryTimestamp(a);
+            const surgB = getPatientSurgeryTimestamp(b);
+            if (surgA !== surgB) return surgA - surgB;
+            return getPatientDobTimestamp(b) - getPatientDobTimestamp(a);
+          }
+          if (sortBy === 'surgery_desc') {
+            const surgA = getPatientSurgeryTimestamp(a);
+            const surgB = getPatientSurgeryTimestamp(b);
+            if (surgA === Infinity) return 1;
+            if (surgB === Infinity) return -1;
+            return surgB - surgA;
+          }
+          if (sortBy === 'age_asc') {
+            return getPatientDobTimestamp(b) - getPatientDobTimestamp(a);
+          }
+          if (sortBy === 'age_desc') {
+            return getPatientDobTimestamp(a) - getPatientDobTimestamp(b);
+          }
+          return 0;
+        });
+
         setFilteredPatients(result);
       })
       .catch(err => console.error('Failed to fetch filtered cases', err));
-  }, [searchQuery, filterStatus, filterUrgency, filterPurpose, deptFilter]);
+  }, [searchQuery, filterStatus, filterUrgency, filterPurpose, deptFilter, currentModule, sortBy, dateFrom, dateTo, applyCounter]);
 
   // 1. Calculate operational stats
   const isDeptModule = DEPARTMENTS.some(d => d.code === currentModule);
@@ -202,6 +326,19 @@ export const GlobalDirectory: React.FC = () => {
         </div>
 
         <div className="form-group">
+          <label>Sort Cases By</label>
+          <select 
+            value={sortBy}
+            onChange={(e) => { setSortBy(e.target.value); setCurrentPage(1); }}
+          >
+            <option value="surgery_asc">Surgery Date: Closest to Farthest</option>
+            <option value="surgery_desc">Surgery Date: Farthest to Closest</option>
+            <option value="age_asc">Age: Youngest to Oldest</option>
+            <option value="age_desc">Age: Oldest to Youngest</option>
+          </select>
+        </div>
+
+        <div className="form-group">
           <label>Coordinator Alarms</label>
           <select 
             value={filterStatus}
@@ -216,20 +353,7 @@ export const GlobalDirectory: React.FC = () => {
           </select>
         </div>
 
-        {!isDeptModule && (
-          <div className="form-group">
-            <label>Filter Specialty</label>
-            <select 
-              value={deptFilter}
-              onChange={(e) => { setDeptFilter(e.target.value); setCurrentPage(1); }}
-            >
-              <option value="all">All Specialties</option>
-              {DEPARTMENTS.filter(d => d.code !== 'anes').map(d => (
-                <option key={d.code} value={d.code}>{d.label}</option>
-              ))}
-            </select>
-          </div>
-        )}
+
 
         <div className="form-group">
           <label>Surgical Urgency</label>
@@ -257,6 +381,48 @@ export const GlobalDirectory: React.FC = () => {
             <option value="followup">General Clinical Follow-up</option>
           </select>
         </div>
+
+        <div className="form-group">
+          <label>Registered From</label>
+          <input 
+            type="date" 
+            value={dateFrom}
+            onChange={(e) => { setDateFrom(e.target.value); setCurrentPage(1); }}
+          />
+        </div>
+
+        <div className="form-group">
+          <label>Registered To</label>
+          <input 
+            type="date" 
+            value={dateTo}
+            onChange={(e) => { setDateTo(e.target.value); setCurrentPage(1); }}
+          />
+        </div>
+
+        <div className="form-group" style={{ flex: '0 0 auto', alignSelf: 'flex-end', display: 'flex', gap: 10 }}>
+          <button 
+            type="button"
+            className="btn btn-secondary flex items-center gap-1.5"
+            onClick={handleResetFilters}
+            title="Reset All Filters"
+            style={{ padding: '9px 16px', fontSize: '13px' }}
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Reset Filters</span>
+          </button>
+
+          <button 
+            type="button"
+            className="btn flex items-center gap-1.5"
+            onClick={handleApplyFilters}
+            title="Apply Filter & Sort Rules"
+            style={{ padding: '9px 16px', fontSize: '13px', background: '#0f766e', color: '#ffffff', border: '1px solid #0f766e' }}
+          >
+            <Filter className="w-3.5 h-3.5" />
+            <span>Apply Filter & Sort</span>
+          </button>
+        </div>
       </div>
 
       {/* ── Patient Cards Grid ── */}
@@ -266,6 +432,9 @@ export const GlobalDirectory: React.FC = () => {
             const isStalledCase = isPatientStalled(patient);
             const badges = getVIPBadges(patient);
             const alarms = getPatientAlarms(patient);
+            const highestPriority = getHighestPriority(alarms);
+            const uniquePriorities = Array.from(new Set(alarms.map(a => a.priority)));
+            const cardAccentStyle = { '--card-accent': getCardAccentGradient(alarms, isStalledCase) } as React.CSSProperties;
             
             // Collect enrolled clinics
             const enrolledDepts = Object.keys(patient.programs || {}).filter(
@@ -275,7 +444,8 @@ export const GlobalDirectory: React.FC = () => {
             return (
               <div 
                 key={patient.id} 
-                className={`card ${isStalledCase ? 'stalled' : ''} ${badges.length > 0 ? 'vip-card' : ''}`}
+                className={`card ${isStalledCase ? 'stalled' : ''} ${highestPriority !== 'none' ? `alarm-${highestPriority}` : ''} ${badges.length > 0 ? 'vip-card' : ''}`}
+                style={cardAccentStyle}
                 onClick={() => setEditingPatientId(patient.id)}
               >
                 <div className="card-header">
@@ -340,20 +510,75 @@ export const GlobalDirectory: React.FC = () => {
                   <div style={{
                     marginTop: 'auto',
                     padding: '8px 12px',
-                    borderRadius: '8px',
-                    background: '#fffbeb',
-                    border: '1px solid #fde68a',
-                    fontSize: '12px',
+                    borderRadius: '10px',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: 4
+                    gap: 5
                   }} onClick={(e) => e.stopPropagation()}>
-                    <span style={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 800, color: 'var(--warning)', letterSpacing: '0.04em' }}>
-                      ⚠️ Active Alarms ({alarms.length})
-                    </span>
-                    <span className="truncate" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                      {alarms[0].note || 'Pending review'}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 800, color: '#475569', letterSpacing: '0.04em' }}>
+                        ⚠️ Active Alarms ({alarms.length})
+                      </span>
+                      {/* Multi-priority color dots */}
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        {uniquePriorities.map(prio => (
+                          <span 
+                            key={prio} 
+                            style={{ 
+                              width: 8, 
+                              height: 8, 
+                              borderRadius: '50%', 
+                              background: prio === 'red' ? '#ef4444' : prio === 'yellow' ? '#f59e0b' : '#3b82f6' 
+                            }} 
+                            title={`${String(prio).toUpperCase()} Alarm`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {alarms.slice(0, 2).map((alarm, idx) => {
+                      const isRed = alarm.priority === 'red';
+                      const isYellow = alarm.priority === 'yellow';
+                      const bg = isRed ? '#fef2f2' : isYellow ? '#fff7ed' : '#eff6ff';
+                      const border = isRed ? '#fecaca' : isYellow ? '#ffedd5' : '#dbeafe';
+                      const color = isRed ? '#dc2626' : isYellow ? '#c2410c' : '#1e40af';
+                      
+                      return (
+                        <div key={idx} style={{
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          background: bg,
+                          border: `1px solid ${border}`,
+                          fontSize: '11px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6
+                        }}>
+                          <span style={{
+                            fontSize: '9px',
+                            fontWeight: 800,
+                            textTransform: 'uppercase',
+                            color: color,
+                            padding: '1px 5px',
+                            borderRadius: '4px',
+                            background: 'rgba(255,255,255,0.7)',
+                            lineHeight: 1
+                          }}>
+                            {alarm.priority}
+                          </span>
+                          <span className="truncate" style={{ fontWeight: 600, color: '#1e293b', flex: 1 }}>
+                            {alarm.note || 'Pending review'}
+                          </span>
+                        </div>
+                      );
+                    })}
+                    {alarms.length > 2 && (
+                      <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 600 }}>
+                        +{alarms.length - 2} more active alarms
+                      </span>
+                    )}
                   </div>
                 )}
 

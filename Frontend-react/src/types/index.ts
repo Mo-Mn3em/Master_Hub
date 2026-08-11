@@ -7,10 +7,54 @@ export interface Department {
   customGates?: string; // HTML string for gates check (from legacy or custom React render)
 }
 
+export interface ClinicData {
+  // Common fields all clinics share
+  first_visit_date?: string;
+  primary_diagnosis?: string;
+  diagnosis_other?: string;
+  surgery_booking_active?: boolean;
+  surgery_booking_date?: string;
+  surgery_booking_note?: string;
+  surgery_booking_priority?: 'red' | 'yellow' | 'blue';
+  planned_operation?: string;
+  anesthesia_feedback?: string;
+  approved_date?: string;
+  // Allow any other dynamic clinical fields
+  [key: string]: any;
+}
+
+export interface AnesthesiaClinicData {
+  assessment_status?: 'pending' | 'fit' | 'unfit';
+  assessment_date?: string;
+  unfit_reason?: string;
+  requested_operation?: string;
+  requested_date?: string;
+  consent_signed?: 'pending' | 'done' | 'refused';
+  post_destination?: 'pending' | 'ward' | 'icu' | 'picu' | 'nicu';
+  labs_ok?: 'pending' | 'done' | 'not_needed';
+  cardiac_clear?: 'pending' | 'done' | 'not_needed';
+  rbc_units?: string;
+  rbc_status?: string;
+  ffp_units?: string;
+  ffp_status?: string;
+  cryo_units?: string;
+  cryo_status?: string;
+  fwb_units?: string;
+  fwb_status?: string;
+  plt_units?: string;
+  plt_status?: string;
+  overall_blood_ready?: string;
+  anesthesia_feedback?: string;
+  approved_date?: string;
+  [key: string]: any;
+}
+
 export interface Patient {
   id: string;
   bas_name: string;
   bas_mrn: string;
+  bas_ssn?: string;
+  bas_typeOfId?: string;
   bas_gender: 'male' | 'female' | '';
   bas_dob: string;
   bas_age: string;
@@ -33,7 +77,7 @@ export interface Patient {
   updatedAt?: string;
   updatedBy?: string;
 
-  // Department-specific programs
+  // Department-specific program data (UI state; apiMapper converts to per-clinic DB columns)
   programs?: {
     [deptCode: string]: ProgramData;
   };
@@ -54,6 +98,7 @@ export interface ProgramData {
   // Dynamic form fields for standard departments
   [key: string]: any;
 }
+
 
 export interface Alarm {
   prefix: string;

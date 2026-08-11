@@ -1,7 +1,32 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
 import DEPARTMENTS from '../../utils/departmentsData';
-import { Menu, Plus, RefreshCw } from 'lucide-react';
+import { 
+  Plus, 
+  ChevronLeft, 
+  ChevronRight,
+  Users,
+  Activity,
+  CalendarCheck,
+  PieChart,
+  Clipboard,
+  UserPlus,
+  FileText,
+  Heart,
+  Brain,
+  Bone,
+  Stethoscope,
+  Droplet,
+  Scissors,
+  Sparkles,
+  Shield,
+  Crosshair,
+  Radio,
+  Layers,
+  Volume2,
+  Target,
+  Smile
+} from 'lucide-react';
 
 interface HeaderProps {
   collapsed: boolean;
@@ -9,88 +34,104 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ collapsed, setCollapsed }) => {
-  const { currentModule, setEditingPatientId, patients } = useApp();
+  const { currentModule, editingPatientId, setEditingPatientId } = useApp();
 
-  const getModuleInfo = () => {
+  const getModuleTitle = () => {
+    if (editingPatientId) {
+      return editingPatientId === 'new' ? 'Register New Patient' : 'Patient Clinical Record';
+    }
     if (currentModule === 'hub') {
-      return {
-        title: 'Global Patient Directory',
-        subtitle: `Viewing all registered patients (${patients.filter(p => !p.isArchived).length} active records)`
-      };
+      return 'Global Patient Directory';
     } else if (currentModule === 'anes') {
-      return {
-        title: 'Anesthesia Pre-op Clinic',
-        subtitle: 'Pre-anesthetic evaluation, physical fitness state, and blood bank crossmatch operations.'
-      };
+      return 'Anesthesia Pre-Op Fitness';
     } else if (currentModule === 'surg') {
-      return {
-        title: 'Surgical List Scheduler',
-        subtitle: 'Patients booked for operating rooms grouped chronologically with active clinical blocker checks.'
-      };
+      return 'Surgical List Scheduler';
     } else if (currentModule === 'analytics') {
-      return {
-        title: 'Analytics & BI Dashboard',
-        subtitle: 'Real-time charts, metrics, and KPI summaries of department loads, fitness, and surgical bookings.'
-      };
+      return 'Analytics & BI Dashboard';
     } else if (currentModule === 'research') {
-      return {
-        title: 'Research Study Hub',
-        subtitle: 'Define custom data templates and export structured spreadsheet databases for medical studies.'
-      };
+      return 'Research Hub';
     } else {
       const dept = DEPARTMENTS.find(d => d.code === currentModule);
-      return {
-        title: dept ? `${dept.label} Clinic` : 'Specialty Clinic',
-        subtitle: 'Record demographic details, clinical checklist gates, and configure custom follow-up alarms.'
-      };
+      return dept ? `${dept.label} Clinic` : 'Specialty Clinic';
     }
   };
 
-  const { title, subtitle } = getModuleInfo();
+  const getHeaderIcon = () => {
+    if (editingPatientId) {
+      return editingPatientId === 'new' 
+        ? <UserPlus className="w-5 h-5 flex-shrink-0" style={{ color: '#0d9488' }} />
+        : <FileText className="w-5 h-5 flex-shrink-0" style={{ color: '#0d9488' }} />;
+    }
+    if (currentModule === 'hub') {
+      return <Users className="w-5 h-5 flex-shrink-0" style={{ color: '#0d9488' }} />;
+    } else if (currentModule === 'anes') {
+      return <Activity className="w-5 h-5 flex-shrink-0" style={{ color: '#8b5cf6' }} />;
+    } else if (currentModule === 'surg') {
+      return <CalendarCheck className="w-5 h-5 flex-shrink-0" style={{ color: '#10b981' }} />;
+    } else if (currentModule === 'analytics') {
+      return <PieChart className="w-5 h-5 flex-shrink-0" style={{ color: '#f59e0b' }} />;
+    } else if (currentModule === 'research') {
+      return <Clipboard className="w-5 h-5 flex-shrink-0" style={{ color: '#3b82f6' }} />;
+    } else {
+      const dept = DEPARTMENTS.find(d => d.code === currentModule);
+      const iconColor = dept?.color || '#0f766e';
+      switch (currentModule) {
+        case 'spin': return <Activity className="w-5 h-5 flex-shrink-0" style={{ color: iconColor }} />;
+        case 'hopb': return <Stethoscope className="w-5 h-5 flex-shrink-0" style={{ color: iconColor }} />;
+        case 'hi':   return <Heart className="w-5 h-5 flex-shrink-0" style={{ color: iconColor }} />;
+        case 'cprp': return <Layers className="w-5 h-5 flex-shrink-0" style={{ color: iconColor }} />;
+        case 'orth': return <Bone className="w-5 h-5 flex-shrink-0" style={{ color: iconColor }} />;
+        case 'neur': return <Brain className="w-5 h-5 flex-shrink-0" style={{ color: iconColor }} />;
+        case 'urol': return <Droplet className="w-5 h-5 flex-shrink-0" style={{ color: iconColor }} />;
+        case 'ent':  return <Volume2 className="w-5 h-5 flex-shrink-0" style={{ color: iconColor }} />;
+        case 'gps':  return <Scissors className="w-5 h-5 flex-shrink-0" style={{ color: iconColor }} />;
+        case 'maxf': return <Smile className="w-5 h-5 flex-shrink-0" style={{ color: iconColor }} />;
+        case 'recon':return <Sparkles className="w-5 h-5 flex-shrink-0" style={{ color: iconColor }} />;
+        case 'abci': return <Shield className="w-5 h-5 flex-shrink-0" style={{ color: iconColor }} />;
+        case 'hope': return <Target className="w-5 h-5 flex-shrink-0" style={{ color: iconColor }} />;
+        case 'hypo': return <Crosshair className="w-5 h-5 flex-shrink-0" style={{ color: iconColor }} />;
+        case 'sbif': return <Radio className="w-5 h-5 flex-shrink-0" style={{ color: iconColor }} />;
+        case 'ndev': return <Brain className="w-5 h-5 flex-shrink-0" style={{ color: iconColor }} />;
+        case 'livt': return <Heart className="w-5 h-5 flex-shrink-0" style={{ color: iconColor }} />;
+        case 'dent': return <Smile className="w-5 h-5 flex-shrink-0" style={{ color: iconColor }} />;
+        default:     return <Activity className="w-5 h-5 flex-shrink-0" style={{ color: iconColor }} />;
+      }
+    }
+  };
+
+  const title = getModuleTitle();
 
   const handleCreatePatient = () => {
-    // Setting editing id to 'new' triggers App to render the form view
     setEditingPatientId('new');
   };
 
   return (
-    <header>
+    <header className="main-header">
       <div className="header-left">
         <button 
           className="sidebar-toggle" 
           onClick={() => setCollapsed(!collapsed)}
-          title="Toggle Navigation Menu"
+          title={collapsed ? "Open Navigation Sidebar" : "Close Navigation Sidebar"}
         >
-          <Menu className="w-5 h-5" />
+          {collapsed ? (
+            <ChevronRight className="w-5 h-5 text-emerald-700" />
+          ) : (
+            <ChevronLeft className="w-5 h-5 text-emerald-700" />
+          )}
         </button>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <img 
-            src="/NOH_logo.jpg" 
-            alt="NOH Logo" 
-            style={{ 
-              width: 38, 
-              height: 38, 
-              objectFit: 'contain', 
-              borderRadius: 8, 
-              background: '#fff', 
-              padding: 2,
-              boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
-              border: '1px solid var(--border)'
-            }} 
-          />
-          <div>
-            <h1 className="header-title">{title}</h1>
-            <div className="header-subtitle">{subtitle}</div>
-          </div>
+
+        <div className="header-brand-box" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {getHeaderIcon()}
+          <h1 className="header-title">{title}</h1>
         </div>
       </div>
 
       <div className="header-actions">
-        {/* Register Patient Button (Shown in Hub and Department Views) */}
-        {(currentModule === 'hub' || DEPARTMENTS.some(d => d.code === currentModule)) && (
-          <button className="btn btn-primary" onClick={handleCreatePatient}>
+        {/* Register Patient Button */}
+        {!editingPatientId && (
+          <button className="header-btn-primary" onClick={handleCreatePatient}>
             <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Register Patient</span>
+            <span>Register New Patient</span>
           </button>
         )}
       </div>

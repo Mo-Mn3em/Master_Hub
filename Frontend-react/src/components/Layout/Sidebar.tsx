@@ -4,12 +4,28 @@ import DEPARTMENTS from '../../utils/departmentsData';
 import { 
   Users, 
   Calendar, 
+  CalendarCheck,
+  Activity,
   PieChart, 
   Clipboard, 
   LogOut, 
   ChevronLeft,
   ChevronRight,
-  ShieldAlert
+  ShieldAlert,
+  Heart,
+  Brain,
+  Bone,
+  Stethoscope,
+  Droplet,
+  Scissors,
+  Sparkles,
+  Shield,
+  Crosshair,
+  Radio,
+  Layers,
+  Volume2,
+  Target,
+  Smile
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -32,12 +48,37 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
     return name.split(' ')[0].substring(0, 2).toUpperCase();
   };
 
+  const getDeptIcon = (code: string, color?: string) => {
+    const iconColor = color || '#0f766e';
+    switch (code) {
+      case 'spin': return <Activity className="w-4 h-4 flex-shrink-0" style={{ color: iconColor }} />;
+      case 'hopb': return <Stethoscope className="w-4 h-4 flex-shrink-0" style={{ color: iconColor }} />;
+      case 'hi':   return <Heart className="w-4 h-4 flex-shrink-0" style={{ color: iconColor }} />;
+      case 'cprp': return <Layers className="w-4 h-4 flex-shrink-0" style={{ color: iconColor }} />;
+      case 'orth': return <Bone className="w-4 h-4 flex-shrink-0" style={{ color: iconColor }} />;
+      case 'neur': return <Brain className="w-4 h-4 flex-shrink-0" style={{ color: iconColor }} />;
+      case 'urol': return <Droplet className="w-4 h-4 flex-shrink-0" style={{ color: iconColor }} />;
+      case 'ent':  return <Volume2 className="w-4 h-4 flex-shrink-0" style={{ color: iconColor }} />;
+      case 'gps':  return <Scissors className="w-4 h-4 flex-shrink-0" style={{ color: iconColor }} />;
+      case 'maxf': return <Smile className="w-4 h-4 flex-shrink-0" style={{ color: iconColor }} />;
+      case 'recon':return <Sparkles className="w-4 h-4 flex-shrink-0" style={{ color: iconColor }} />;
+      case 'abci': return <Shield className="w-4 h-4 flex-shrink-0" style={{ color: iconColor }} />;
+      case 'hope': return <Target className="w-4 h-4 flex-shrink-0" style={{ color: iconColor }} />;
+      case 'hypo': return <Crosshair className="w-4 h-4 flex-shrink-0" style={{ color: iconColor }} />;
+      case 'sbif': return <Radio className="w-4 h-4 flex-shrink-0" style={{ color: iconColor }} />;
+      case 'ndev': return <Brain className="w-4 h-4 flex-shrink-0" style={{ color: iconColor }} />;
+      case 'livt': return <Heart className="w-4 h-4 flex-shrink-0" style={{ color: iconColor }} />;
+      case 'dent': return <Smile className="w-4 h-4 flex-shrink-0" style={{ color: iconColor }} />;
+      default:     return <Activity className="w-4 h-4 flex-shrink-0" style={{ color: iconColor }} />;
+    }
+  };
+
   return (
     <>
-      {/* Mobile Sidebar Overlay */}
+      {/* Mobile Backdrop Overlay */}
       {!collapsed && (
         <div 
-          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 md:hidden"
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 md:hidden"
           onClick={() => setCollapsed(true)}
         />
       )}
@@ -50,14 +91,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
           </div>
           <div className="flex-1 min-w-0">
             <div className="brand-text">Master Hub</div>
-            <div className="brand-sub">Clinical Database</div>
           </div>
-          <button 
-            className="md:hidden text-slate-400 hover:text-white"
-            onClick={() => setCollapsed(true)}
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
         </div>
 
         {/* Navigation Sections */}
@@ -68,43 +102,39 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
             className={`nav-item ${currentModule === 'hub' ? 'active' : ''}`}
             onClick={() => handleNavClick('hub')}
           >
-            <Users className="w-4 h-4 text-teal-400" />
+            <Users className="w-4 h-4 flex-shrink-0" style={{ color: '#0d9488' }} />
             <span>Global Directory</span>
           </div>
 
           <div 
             className={`nav-item ${currentModule === 'anes' ? 'active' : ''}`}
             onClick={() => handleNavClick('anes')}
-            style={{ color: '#c084fc', fontWeight: 'bold' }}
           >
-            <span className="nav-item-dot" style={{ background: '#9333ea', opacity: 1 }} />
+            <Activity className="w-4 h-4 flex-shrink-0" style={{ color: '#8b5cf6' }} />
             <span>Anesthesia Clinic</span>
           </div>
 
           <div 
             className={`nav-item ${currentModule === 'surg' ? 'active' : ''}`}
             onClick={() => handleNavClick('surg')}
-            style={{ color: '#4ade80', fontWeight: 'bold' }}
           >
-            <span className="nav-item-dot" style={{ background: '#15803d', opacity: 1 }} />
+            <CalendarCheck className="w-4 h-4 flex-shrink-0" style={{ color: '#10b981' }} />
             <span>Surgical List</span>
           </div>
 
           <div 
             className={`nav-item ${currentModule === 'analytics' ? 'active' : ''}`}
             onClick={() => handleNavClick('analytics')}
-            style={{ color: '#fbbf24', fontWeight: 'bold' }}
           >
-            <PieChart className="w-4 h-4 text-amber-400" />
+            <PieChart className="w-4 h-4 flex-shrink-0" style={{ color: '#f59e0b' }} />
             <span>Analytics & BI</span>
           </div>
 
           <div 
             className={`nav-item ${currentModule === 'research' ? 'active' : ''}`}
             onClick={() => handleNavClick('research')}
-            style={{ color: '#2dd4bf', fontWeight: 'bold' }}
           >
-            <Clipboard className="w-4 h-4 text-teal-400" />
+            <Clipboard className="w-4 h-4 flex-shrink-0" style={{ color: '#3b82f6' }} />
             <span>Research Hub</span>
           </div>
 
@@ -118,14 +148,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
                 className={`nav-item ${isActive ? 'active' : ''}`}
                 onClick={() => handleNavClick(dept.code)}
               >
-                <span 
-                  className="nav-item-dot" 
-                  style={{ 
-                    background: dept.color, 
-                    opacity: isActive ? 1 : 0.4,
-                    boxShadow: isActive ? `0 0 8px ${dept.color}` : 'none'
-                  }} 
-                />
+                {getDeptIcon(dept.code, dept.color)}
                 <span className="truncate">{dept.label}</span>
               </div>
             );
@@ -142,14 +165,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
               <div className="user-name truncate" title={currentUser}>
                 {currentUser}
               </div>
-              <button 
-                onClick={logout}
-                className="user-logout flex items-center gap-1 hover:text-red-400"
-              >
-                <LogOut className="w-3 h-3" />
-                <span>Sign Out</span>
-              </button>
+              <div className="text-[11px] text-slate-400">Coordinator Session</div>
             </div>
+            <button 
+              onClick={logout}
+              className="sidebar-logout-pill"
+              title="Sign Out"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
           </div>
         )}
       </nav>

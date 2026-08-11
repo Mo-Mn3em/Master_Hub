@@ -15,15 +15,184 @@ import {
   ChevronDown, 
   ChevronUp, 
   AlertCircle, 
-  Clock, 
-  User, 
-  Calendar,
   CheckCircle,
   AlertTriangle,
   ShieldCheck,
   Loader2
 } from 'lucide-react';
 import { verifyPatientNileApi } from '../../utils/api';
+
+const PROCEDURE_DB: Record<string, (string | { category: string; ops: string[] })[]> = {
+  hi: [
+    {
+      category: "Cardiac Catheterization",
+      ops: [
+        "Diagnostic Cardiac Catheterization with Angiography and Hemodynamics",
+        "Atrial Septal Defect Device Closure",
+        "Patent Ductus Erasure",
+        "Balloon Pulmonary Valvuloplasty",
+        "Balloon Aortic Valvuloplasty",
+        "Coarctation Stenting / Balloon Angioplasty"
+      ]
+    },
+    {
+      category: "Open Heart Surgery",
+      ops: [
+        "ASD Closure", "Atrial Septectomy", "Bidirectional Glenn (BDG)", 
+        "CAVSD Repair", "Coarctation Repair", "DORV/TOF Repair", 
+        "Exploration after Open Heart Surgery", "PDA Ligation", 
+        "Pulmonary Valve Replacement", "Pulmonary Valvotomy/Augmentation", "RVOT Reconstruction", 
+        "SAM / Septal Myectomy", "TOF Repair (Tetralogy of Fallot)", "Valve Repair Surgery", 
+        "Valve Replacement", "VSD Closure"
+      ]
+    }
+  ],
+  orth: [
+    "Adductor Tenotomy", "Arthroereisis", "Baumann Procedure", "Botox Injection", 
+    "Brown Procedure", "Change of Cast (Without Anesthesia)", "Closed Reduction of Hip", 
+    "Constriction Ring Release", "Derotation of Forearm", "Evans Osteotomy", 
+    "Excision of Osteochondroma", "Fracture Fixation", "Grice Operation", 
+    "Hallux Varus Correction", "Hamstring Lengthening", "Hemiepiphysiodesis (Distal Femur)", 
+    "Hemiepiphysiodesis (Proximal Tibia)", "Ilizarov Lengthening", "Imhausser Osteotomy", 
+    "Lapidus Procedure", "Manipulation and Casting (Under Anesthesia)", 
+    "Manipulation and Casting (Without Anesthesia)", "Medial Displacement Calcaneal Osteotomy", 
+    "Medial Plication of Knee", "Metatarsal Osteotomy", "Patellar Tendon Advancement", 
+    "Plantar Fascia Release", "Polydactyly Repair", "Quadricepsoplasty", 
+    "Rectus Femoris Lengthening", "Release of Congenital Trigger Finger", "Removal of 8-Plate", 
+    "Removal of Foreign Body", "Removal of Ilizarov Frame", "Removal of Nancy Nail or K-Wire", 
+    "Removal of Plate / Hardware", "Salter Osteotomy", "Shelf Osteotomy", 
+    "Soft Tissue Release of Foot", "Subtalar Fusion", "Subtrochanteric Osteotomy", 
+    "Supracondylar Femur Corrective Osteotomy", "Supracondylar Humerus Corrective Osteotomy", 
+    "Talectomy", "Talonavicular Coalition Excision", "Telescopic Nail Insertion", 
+    "Tendo Achillis Lengthening", "Tendon Transfer Around Shoulder", "Tendon Transfer Around Wrist", 
+    "Tendon Transfer with Foot Correction", "Triple Arthrodesis / Triple Attack", 
+    "Upper Tibial Corrective Osteotomy", "Wound Debridement"
+  ],
+  urol: [
+    "Bladder Augmentation", "Bladder Exstrophy Closure", "Bladder Neck Repair", 
+    "Botox Injection", "Closure of Bladder Fistula", "Cystolitholapaxy (Removal of Bladder Stones)", 
+    "Cystoscopic Stent Removal", "Cystoscopy", "Deflux Injection", 
+    "Distal Hypospadias Repair", "Endoscopic Foreign Body Removal", "Examination Under Anesthesia (EUA)", 
+    "Excision of Urethral Mass", "Excision/Puncture of Ureterocele", "Heminephrectomy", 
+    "Inguinal Hernia Repair", "JJ Stent Insertion", "Kelly Operation", 
+    "Laparoscopic Nephrectomy", "Laparoscopic Ureteral Reimplantation", "Male Epispadias Repair", 
+    "Malone Appendicostomy (MACE)", "Meatoplasty", "Mitrofanoff Appendicovesicostomy", 
+    "Nephrectomy", "Orchiopexy", "Percutaneous Nephrostomy (PCN)", 
+    "Posterior Urethral Valve (PUV) Resection", "Proximal Hypospadias Repair", "Pyeloplasty (PUJO Repair)", 
+    "Refashioning of Malone", "Refashioning of Mitrofanoff", "Removal of Foreign Body", 
+    "Surgical Abdominal Exploration", "Ureteral Reimplantation", "Ureterostomy", 
+    "Vesicostomy"
+  ],
+  hypo: [
+    "Botox Injection", "Chordee Correction", "Cystoscopy", "Distal Hypospadias Repair", 
+    "Examination Under Anesthesia (EUA)", "Hydrocele Repair", "Hypospadias Cripple (Redo)", 
+    "Orchiopexy (Bilateral)", "Orchiopexy (Unilateral)", "Proximal Hypospadias Repair", 
+    "Umbilical Hernia Repair", "Urethroplasty"
+  ],
+  hopb: [
+    "Kelly Operation", "Kelly Operation with Bladder Augmentation", "Primary Bladder Exstrophy Closure"
+  ],
+  cprp: [
+    "Anal Transposition", "ASARP (Anterior Sagittal Anorectoplasty)", "Bladder Augmentation", 
+    "Bladder Exstrophy Closure", "Bladder Neck Repair", "Botox Injection", 
+    "Cloacal / Urogenital Sinus Repair", "Colostomy / Ileostomy Closure", "Colostomy / Ileostomy Creation", 
+    "Cut Back (Anoplasty)", "Cystoscopy", "Diagnostic Laparoscopy", 
+    "Endorectal Pull-through", "Evacuation Under Anesthesia", "Examination Under Anesthesia (EUA)", 
+    "Excision of Intravesical Ureterocele", "Excision of Rectal Mucosal Ectropion", "Excision of Rectal Polyp", 
+    "Genitoplasty", "Gonadectomy", "Hemicolectomy", 
+    "Ileal Duhamel Pull-through", "Indiana Pouch / Ileal Conduit", "Inguinal Hernia Repair", 
+    "Injection of Rectal Prolapse", "Kelly Operation", "Laparoscopic Ovarian Tumor Excision", 
+    "Lateral Sphincterotomy", "Male Epispadias Repair", "Malone Appendicostomy (MACE)", 
+    "Mitrofanoff Appendicovesicostomy", "Patent Urachus Repair", "PSARP (Posterior Sagittal Anorectoplasty)", 
+    "Rectal Biopsy", "Redo Pull-through", "Refashioning of Malone", 
+    "Refashioning of Mitrofanoff", "Suprapubic Cystostomy", "Surgical Abdominal Exploration", 
+    "Transanal Pull-through", "Vaginal Reconstruction", "Vaginoplasty"
+  ],
+  neur: [
+    "Craniosynostosis Repair", "CSF Pressure Operation", "Endoscopic Third Ventriculostomy (ETV)", 
+    "Evacuation of Subdural Hematoma", "Excision of Dermoid / Sebaceous Cyst", 
+    "Excision of Intraosseous Scalp Swelling", "External Ventricular Drain (EVD)", 
+    "Meningocele Repair", "Repair of Encephalocele", "Selective Dorsal Rhizotomy", 
+    "Shunt Operation", "Shunt Revision", "TP Shunt Operation", "Untethering of Spinal Cord"
+  ],
+  spin: [
+    "Kyphosis Correction", "Lumbar Decompression and Fixation", "Reduction of Cervical Subluxation", 
+    "Scoliosis Correction", "Scoliosis Revision", "Untethering of Spinal Cord"
+  ],
+  ent: [
+    "Airway Examination Under General Anesthesia", "Balloon Eustachian Tuboplasty", "Choanal Atresia Repair", 
+    "Congenital Neck Band Release with Z-plasty", "Endoscopic Adenoidectomy", 
+    "Endoscopic Grommet Tube Insertion", "Endoscopic Septoplasty", "Laryngeal Web Release", 
+    "Laryngotracheoplasty", "Myringotomy", "Ossicular Reconstruction", 
+    "Pediatric FESS (Functional Endoscopic Sinus Surgery)", "Pediatric Mastoidectomy", 
+    "Pediatric Tympanoplasty", "Pre and Post Auricular Branchial Sinus Excision", 
+    "Preauricular Sinus Microscopic Excision", "Removal of Tracheal Stent", "Tongue Tie Release", 
+    "Tonsillectomy", "Tracheostomy", "Turbinoplasty (Inferior Turbinates)"
+  ],
+  gps: [
+    "Abdominal Wall Reconstruction", "Biliary Diversion", "Bleomycin Injection", 
+    "Botox Injection", "Bronchoscopy", "CDH Repair", "Circumcision", 
+    "Closure of Colostomy", "Cut Back (Anoplasty)", "Cystoscopy", "Diagnostic Laparoscopy", 
+    "Diaphragmatic Plication", "Esophageal Atresia and TEF Repair", "Esophageal Dilatation", 
+    "Esophageal Replacement", "Esophageal Resection", "Examination Under Anesthesia (EUA)", 
+    "Excision of Abdominal Cystic Hygroma", "Excision of Abdominal Tumor", "Excision of Branchial Fistula", 
+    "Excision of Choledochal Cyst", "Excision of Congenital Neck Mass", "Excision of Cystic Hygroma", 
+    "Excision of Duplication Cyst", "Excision of Lung Cyst / Mediastinal Mass", "Excision/Treatment of Hemangioma", 
+    "Feeding Gastrostomy", "Gastrostomy Closure", "Genitoplasty", 
+    "Gonadectomy", "Hemicolectomy", "Hydrocele Repair", "Incisional Hernia Repair", 
+    "Inguinal Hernia Repair", "Injection of Rectal Prolapse", "Kasai Procedure (Biliary Atresia)", 
+    "Laparoscopic Orchiopexy (Undescended Testis)", "Nissen Fundoplication", "Omphalocele Repair (Major)", 
+    "Orchiopexy (Bilateral)", "Orchiopexy (Unilateral)", "Pancreatectomy (Partial/Total)", 
+    "Penoscrotal Web Repair", "Refashioning of Prolapsed Stoma", "Removal of Foreign Body", 
+    "Sacrococcygeal Teratoma Excision", "Surgical Abdominal Exploration", "Testicular Biopsy", 
+    "Thoracoscopic Sympathectomy", "Umbilical Hernia Repair", "Urethroplasty", "Wound Debridement"
+  ],
+  maxf: [
+    "Alar Reconstruction", "Alveolar Bone Graft", "Bleomycin Injection", 
+    "Buccinator Flap Separation", "Cleft Lip and Alveolus Repair", "Cleft Lip Repair (Bilateral)", 
+    "Cleft Lip Repair (Unilateral)", "Cleft Lip Revision", "Cleft Palate Repair", 
+    "Closure of Palatal Fistula", "Complete Cleft Lip and Alveolus Repair (Unilateral)", 
+    "Craniofacial Syndrome Surgery", "Craniosynostosis Repair", "Excision of Cystic Hygroma", 
+    "Excision of Soft Tissue Tumor and Mandibular Cleft Correction", "Hemimandibulectomy with Rib Graft Reconstruction", 
+    "Large Cleft Palate Repair", "Lip and Nose Revision", "Lower Lip Reconstruction (Flap and Skin Graft)", 
+    "Nasal Reconstruction", "Oral Tumor Resection", "Palatal Lengthening for VPI", 
+    "Preauricular Skin Tag Removal", "Serial Excision of Hemangioma", "Soft Cleft Palate Repair", 
+    "Tissue Reduction of Neurofibromatosis"
+  ],
+  recon: [
+    "Abdominal Wall Reconstruction", "Cleft Hand Correction", "Congenital Neck Band Release with Z-plasty", 
+    "Debulking for Macrodactyly", "Excision of Constriction Ring", "Excision of Ganglion Cyst", 
+    "Excision of Intraosseous Scalp Swelling", "Excision of Sacral Dermal Sinus", "Excision of Tumor", 
+    "Excision/Treatment of Hemangioma", "Finger Amputation", "Flap Coverage", 
+    "Flap Vessel Revision", "Free Flap Reconstruction", "Lymphatic Malformation Reduction", 
+    "Otoplasty (Prominent Ear Correction)", "Polydactyly Repair", "Polydactyly Repair (Without Bony Articulation)", 
+    "Preauricular Skin Tag Removal", "Scar Revision", "Serial Excision of Hemangioma", 
+    "Skin Graft", "Syndactyly Separation (Multiple Webs)", "Syndactyly Separation (Single Web)", 
+    "Tissue Expander Insertion", "Tissue Expander Removal", "Tissue Reduction of Neurofibromatosis", 
+    "Webbing Scar Release", "Wound Debridement"
+  ],
+  abci: [
+    "Auditory Brainstem Implant (ABI)", "Bone Anchored Hearing Aid (BAHA) Insertion", 
+    "Cochlear Implantation", "Excision of Cochlear Schwannoma"
+  ],
+  dent: [
+    "Major Dental Procedure", "Moderate Dental Procedure", 
+    "Minor Dental Procedure"
+  ]
+};
+
+const getDepartmentProcedures = (deptCode: string): string[] => {
+  const data = PROCEDURE_DB[deptCode];
+  if (!data) return [];
+  if (Array.isArray(data)) {
+    if (typeof data[0] === 'string') {
+      return data as string[];
+    } else {
+      return (data as { category: string; ops: string[] }[]).flatMap(c => c.ops);
+    }
+  }
+  return [];
+};
 
 export const PatientForm: React.FC = () => {
   const { 
@@ -194,6 +363,100 @@ export const PatientForm: React.FC = () => {
     }
     setDirty(false);
   }, [editingPatientId, existingPatient, isNew]);
+
+  // Auto-sync Anesthesia Clinic enrollment based on active surgical operation requests
+  useEffect(() => {
+    if (!localPatient.programs) return;
+
+    let ops: string[] = [];
+    let dates: string[] = [];
+    let anyActive = false;
+
+    DEPARTMENTS.forEach(d => {
+      if (d.code === 'anes' || d.code === 'surg') return;
+      const prog = localPatient.programs?.[d.code];
+      if (prog && prog.enrolled) {
+        const pfx = d.pfx || d.code;
+        const alarmActive = !!prog[`${pfx}OpReqAlarmActive`];
+        if (alarmActive) {
+          anyActive = true;
+          if (prog.opName) {
+            ops.push(prog.opName);
+          }
+          if (prog[`${pfx}OpReqAlarmDate`]) {
+            dates.push(prog[`${pfx}OpReqAlarmDate`]);
+          }
+        }
+      }
+    });
+
+    const finalOpStr = ops.join(' + ');
+    const finalDateStr = Array.from(new Set(dates.filter(Boolean))).join(' & ');
+
+    const currentAnes: Record<string, any> = localPatient.programs.anes || {};
+    const surgEnrolled = !!localPatient.programs.surg?.enrolled;
+
+    let shouldUpdate = false;
+    let nextAnesEnrolled = false;
+    let nextAnesData = { ...currentAnes };
+
+    if (!anyActive) {
+      if (!surgEnrolled && currentAnes.enrolled) {
+        shouldUpdate = true;
+        nextAnesEnrolled = false;
+        nextAnesData = {
+          ...currentAnes,
+          enrolled: false,
+          reqOpName: '',
+          assessmentStatus: 'pending',
+          assessmentDate: '',
+          unfitReason: '',
+          consentSigned: 'pending',
+          postDest: 'pending',
+          labsOk: 'pending',
+          cardiacClear: 'pending',
+          rbcUnits: '', rbcStatus: 'not_needed',
+          ffpUnits: '', ffpStatus: 'not_needed',
+          cryoUnits: '', cryoStatus: 'not_needed',
+          fwbUnits: '', fwbStatus: 'not_needed',
+          pltUnits: '', pltStatus: 'not_needed',
+          overallBloodReady: 'not_needed'
+        };
+      }
+    } else {
+      if (!surgEnrolled) {
+        const hasEnrolledDiff = !currentAnes.enrolled;
+        const hasOpStrDiff = currentAnes.reqOpName !== finalOpStr;
+        const hasDateDiff = currentAnes.reqTargetDate !== finalDateStr;
+        if (hasEnrolledDiff || hasOpStrDiff || hasDateDiff) {
+          shouldUpdate = true;
+          nextAnesEnrolled = true;
+          nextAnesData = {
+            ...currentAnes,
+            enrolled: true,
+            reqOpName: finalOpStr,
+            reqTargetDate: finalDateStr
+          };
+        }
+      }
+    }
+
+    if (shouldUpdate) {
+      setEnrolledClinics(prev => {
+        if (prev.anes !== nextAnesEnrolled) {
+          return { ...prev, anes: nextAnesEnrolled };
+        }
+        return prev;
+      });
+      setLocalPatient(prev => ({
+        ...prev,
+        programs: {
+          ...prev.programs,
+          anes: nextAnesData
+        }
+      }));
+    }
+  }, [localPatient.programs]);
 
   // Recalculate age on DOB change
   useEffect(() => {
@@ -771,6 +1034,39 @@ export const PatientForm: React.FC = () => {
                 </div>
               </div>
             </div>
+            {ap.endsWith('OpReq') && (
+              <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px dashed var(--border)' }}>
+                <label style={{ fontWeight: 'bold', color: 'var(--primary)' }}>Planned Surgical / Procedure Name *</label>
+                <input 
+                  type="text" 
+                  id={`${ap.replace('OpReq', '')}_opName`}
+                  placeholder="Select from presets below or type here..."
+                  value={prog.opName || ''}
+                  onChange={() => {}}
+                  required
+                />
+                <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {getDepartmentProcedures(deptCode).map(proc => (
+                    <button 
+                      key={proc}
+                      type="button" 
+                      className="btn-preset" 
+                      onClick={() => appendProcedure(ap.replace('OpReq', ''), proc)}
+                    >
+                      + {proc}
+                    </button>
+                  ))}
+                  <button 
+                    type="button" 
+                    className="btn-preset" 
+                    style={{ background: '#fecaca', border: '1px solid #fca5a5', color: '#b91c1c' }}
+                    onClick={() => clearProcedure(ap.replace('OpReq', ''))}
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -804,7 +1100,7 @@ export const PatientForm: React.FC = () => {
         <div className="enrollment-panel" style={{ borderRadius: '16px', marginBottom: 24 }}>
           <div className="enrollment-header">Department Clinic Enrollments</div>
           <div className="enrollment-grid">
-            {DEPARTMENTS.map(dept => {
+            {DEPARTMENTS.filter(dept => dept.code !== 'anes').map(dept => {
               const enrolled = !!enrolledClinics[dept.code];
               const activeClass = enrolled ? `active-${dept.code}` : '';
               return (
@@ -834,7 +1130,7 @@ export const PatientForm: React.FC = () => {
           <div className={`program-block ${activeAccordion === 'demographics' ? 'active' : ''}`}>
             <div 
               className="program-block-header" 
-              style={{ backgroundColor: 'var(--nav-bg)' }}
+              style={{ background: 'linear-gradient(135deg, #0f766e 0%, #0d9488 100%)', color: '#ffffff' }}
               onClick={() => setActiveAccordion(activeAccordion === 'demographics' ? '' : 'demographics')}
             >
               <span>1. General Patient Demographics</span>
@@ -1178,39 +1474,6 @@ export const PatientForm: React.FC = () => {
                         />
                       </div>
                     )}
-
-                    {/* Manual Blocker Switches */}
-                    <div className="gate-block" style={{ background: '#f8fafc', borderLeft: '3px solid #64748b' }}>
-                      <h5 style={{ color: '#475569' }}>⚠️ Manual Administrative Blockers</h5>
-                      <div className="form-grid">
-                        {[1, 2, 3].map(i => {
-                          const blkActive = !!(localPatient.programs?.[dept.code]?.[`${pfx}Blk${i}AlarmActive`]);
-                          const blkNote = localPatient.programs?.[dept.code]?.[`${pfx}Blk${i}AlarmNote`] || '';
-                          return (
-                            <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-                                <input 
-                                  type="checkbox" 
-                                  id={`${pfx}Blk${i}AlarmActive`}
-                                  checked={blkActive}
-                                  onChange={() => {}}
-                                />
-                                <strong>Enable Blocker #{i}</strong>
-                              </label>
-                              {blkActive && (
-                                <input 
-                                  type="text" 
-                                  id={`${pfx}Blk${i}AlarmNote`} 
-                                  placeholder="Reason for blocker (e.g. pending MRI report)..."
-                                  value={blkNote}
-                                  onChange={() => {}}
-                                />
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
 
                     {/* Active Blockers Live View */}
                     <div style={{
