@@ -1198,14 +1198,21 @@ export const PatientForm: React.FC = () => {
                     />
                   </div>
                   <div className="form-group">
-                    <label>Phone / Contact Number</label>
-                    <input 
-                      type="tel" 
-                      id="bas_phone" 
-                      placeholder="+20 100 000 0000"
-                      value={localPatient.bas_phone || ''}
+                    <label>Governorate (Location)</label>
+                    <select 
+                      id="bas_gov"
+                      value={localPatient.bas_gov || ''}
                       onChange={() => {}}
-                    />
+                    >
+                      <option value="">Select Governorate</option>
+                      <option value="Alexandria">Alexandria</option>
+                      <option value="Cairo">Cairo</option>
+                      <option value="Giza">Giza</option>
+                      <option value="Beheira">Beheira</option>
+                      <option value="Luxor">Luxor</option>
+                      <option value="Aswan">Aswan</option>
+                      <option value="Other">Other / International</option>
+                    </select>
                   </div>
                 </div>
 
@@ -1294,23 +1301,6 @@ export const PatientForm: React.FC = () => {
                 </div>
 
                 <div className="form-grid three">
-                  <div className="form-group">
-                    <label>Governorate (Location)</label>
-                    <select 
-                      id="bas_gov"
-                      value={localPatient.bas_gov || ''}
-                      onChange={() => {}}
-                    >
-                      <option value="">Select Governorate</option>
-                      <option value="Alexandria">Alexandria</option>
-                      <option value="Cairo">Cairo</option>
-                      <option value="Giza">Giza</option>
-                      <option value="Beheira">Beheira</option>
-                      <option value="Luxor">Luxor</option>
-                      <option value="Aswan">Aswan</option>
-                      <option value="Other">Other / International</option>
-                    </select>
-                  </div>
                   <div className="form-group">
                     <label>Blood Group</label>
                     <select 
