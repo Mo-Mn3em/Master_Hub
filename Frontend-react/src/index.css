@@ -883,41 +883,23 @@ textarea {
 
 .card.stalled {
   animation: stalledPulse 2.5s ease-in-out infinite;
-  border-color: #fca5a5 !important;
-  background: linear-gradient(180deg, #ffffff 0%, #fef2f2 100%);
 }
 
 .card.stalled::before {
-  background: #ef4444 !important;
+  background: var(--card-accent, #ef4444) !important;
 }
 
-/* ── DYNAMIC ALARM COLORING ──────────────── */
-.card.alarm-red {
-  border-color: #fca5a5 !important;
-  background: linear-gradient(180deg, #ffffff 0%, #fef2f2 100%);
-}
+/* ── DYNAMIC ALARM COLORING (TOP LINE ONLY) ──────────────── */
 .card.alarm-red::before {
-  background: #ef4444 !important;
+  background: var(--card-accent, #ef4444) !important;
 }
 
-.card.alarm-yellow {
-  border-color: #fde68a !important;
-  background: linear-gradient(180deg, #ffffff 0%, #fffbeb 100%);
-}
 .card.alarm-yellow::before {
-  background: #f59e0b !important;
+  background: var(--card-accent, #f59e0b) !important;
 }
 
-.card.alarm-blue {
-  border-color: #bfdbfe !important;
-  background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%);
-}
 .card.alarm-blue::before {
-  background: #3b82f6 !important;
-}
-
-.card.vip-card::before {
-  background: linear-gradient(to right, #0d9488, #2563eb) !important;
+  background: var(--card-accent, #3b82f6) !important;
 }
 
 .card-footer {
