@@ -519,20 +519,6 @@ export const PatientForm: React.FC = () => {
       }
     });
 
-    // Populate blood bank fields (Special case)
-    const anesBlock = document.getElementById('block_anes');
-    if (anesBlock && localPatient.programs?.anes) {
-      const anes: Record<string, any> = localPatient.programs.anes;
-      ['rbc', 'ffp', 'cryo', 'fwb', 'plt'].forEach(b => {
-        const unitsEl = document.getElementById(`anes_${b}Units`) as HTMLInputElement;
-        const statusEl = document.getElementById(`anes_${b}Status`) as HTMLSelectElement;
-        if (unitsEl) unitsEl.value = anes[`${b}Units`] || '';
-        if (statusEl) statusEl.value = anes[`${b}Status`] || 'not_needed';
-      });
-      const overallEl = document.getElementById('anes_overallBloodReady') as HTMLSelectElement;
-      if (overallEl) overallEl.value = anes.overallBloodReady || 'pending';
-    }
-
     // Populate surgery fields
     if (localPatient.programs?.surg) {
       const surg: Record<string, any> = localPatient.programs.surg;

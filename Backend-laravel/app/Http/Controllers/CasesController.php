@@ -349,13 +349,19 @@ class CasesController extends Controller
                 $enrolledDeptIds[] = $anesMaster->id;
                 $requestedOpName = implode(' + ', array_unique($surgeryOps));
 
-                Dept\DeptAnesthesia::updateOrCreate(
-                    ['case_id' => $case->id],
-                    [
-                        'status' => 'enrolled',
-                        'requested_operation' => $requestedOpName ?: null,
-                    ]
-                );
+                $existingAnes = Dept\DeptAnesthesia::where('case_id', $case->id)->first();
+                $finalOpName = !empty($requestedOpName) ? $requestedOpName : ($existingAnes?->requested_operation);
+
+                $updateData = ['status' => 'enrolled'];
+                if (!empty($finalOpName)) {
+                    $updateData['requested_operation'] = $finalOpName;
+                }
+
+                if ($existingAnes) {
+                    $existingAnes->update($updateData);
+                } else {
+                    Dept\DeptAnesthesia::create(array_merge(['case_id' => $case->id], $updateData));
+                }
             }
         }
 
