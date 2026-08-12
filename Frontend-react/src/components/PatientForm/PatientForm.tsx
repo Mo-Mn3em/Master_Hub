@@ -325,10 +325,19 @@ export const PatientForm: React.FC = () => {
       const cloned = JSON.parse(JSON.stringify(existingPatient));
       setLocalPatient(cloned);
       
-      // Map enrolled clinics
+      // Map enrolled clinics (Close Anesthesia if case is moved to Surgical List)
+      const isOnSurgicalList = cloned.programs?.surg?.enrolled === true;
+      if (isOnSurgicalList && cloned.programs?.anes) {
+        cloned.programs.anes.enrolled = false;
+      }
+
       const enrolls: { [code: string]: boolean } = {};
       DEPARTMENTS.forEach(d => {
-        enrolls[d.code] = !!cloned.programs?.[d.code]?.enrolled;
+        if (d.code === 'anes' && isOnSurgicalList) {
+          enrolls[d.code] = false;
+        } else {
+          enrolls[d.code] = !!cloned.programs?.[d.code]?.enrolled;
+        }
       });
       setEnrolledClinics(enrolls);
     } else {

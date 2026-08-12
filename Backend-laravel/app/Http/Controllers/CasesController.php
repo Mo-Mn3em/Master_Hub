@@ -345,7 +345,19 @@ class CasesController extends Controller
                 }
             }
 
-            if ($hasSurgeryRequested) {
+            $surgMaster = $allDepts->get('surg');
+            $surgRecord = Dept\DeptSurgicalList::where('case_id', $case->id)->first();
+            $isOnSurgicalList = ($surgMaster && in_array($surgMaster->id, $enrolledDeptIds)) || 
+                                ($surgRecord && strtolower((string)$surgRecord->status) === 'enrolled');
+
+            if ($isOnSurgicalList) {
+                // If patient is on Surgical List, close/discharge Anesthesia
+                $existingAnes = Dept\DeptAnesthesia::where('case_id', $case->id)->first();
+                if ($existingAnes) {
+                    $existingAnes->update(['status' => 'discharged']);
+                }
+                $enrolledDeptIds = array_values(array_diff($enrolledDeptIds, [$anesMaster->id]));
+            } else if ($hasSurgeryRequested) {
                 $enrolledDeptIds[] = $anesMaster->id;
                 $requestedOpName = implode(' + ', array_unique($surgeryOps));
 
