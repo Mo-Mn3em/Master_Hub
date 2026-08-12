@@ -101,12 +101,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   useEffect(() => {
-    // Restore user session if token exists
-    const storedUser = localStorage.getItem('master_hub_user');
-    const token = getToken();
-    if (storedUser && token) {
-      setCurrentUser(storedUser);
-    }
+    // Always start on login screen every time application opens
+    setCurrentUser(null);
+    localStorage.removeItem('master_hub_user');
 
     loadPatients();
 
