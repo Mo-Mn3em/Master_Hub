@@ -509,15 +509,15 @@ export const GlobalDirectory: React.FC = () => {
                 {alarms.length > 0 && (
                   <div style={{
                     marginTop: 'auto',
-                    padding: '8px 12px',
-                    borderRadius: '10px',
+                    padding: '10px 12px',
+                    borderRadius: '12px',
                     background: '#f8fafc',
                     border: '1px solid #e2e8f0',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: 5
+                    gap: 6
                   }} onClick={(e) => e.stopPropagation()}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
                       <span style={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 800, color: '#475569', letterSpacing: '0.04em' }}>
                         ⚠️ Active Alarms ({alarms.length})
                       </span>
@@ -538,7 +538,7 @@ export const GlobalDirectory: React.FC = () => {
                       </div>
                     </div>
 
-                    {alarms.slice(0, 2).map((alarm, idx) => {
+                    {alarms.map((alarm, idx) => {
                       const isRed = alarm.priority === 'red';
                       const isYellow = alarm.priority === 'yellow';
                       const bg = isRed ? '#fef2f2' : isYellow ? '#fff7ed' : '#eff6ff';
@@ -547,38 +547,45 @@ export const GlobalDirectory: React.FC = () => {
                       
                       return (
                         <div key={idx} style={{
-                          padding: '4px 8px',
-                          borderRadius: '6px',
+                          padding: '6px 10px',
+                          borderRadius: '8px',
                           background: bg,
                           border: `1px solid ${border}`,
                           fontSize: '11px',
                           display: 'flex',
-                          alignItems: 'center',
-                          gap: 6
+                          flexDirection: 'column',
+                          gap: 4
                         }}>
-                          <span style={{
-                            fontSize: '9px',
-                            fontWeight: 800,
-                            textTransform: 'uppercase',
-                            color: color,
-                            padding: '1px 5px',
-                            borderRadius: '4px',
-                            background: 'rgba(255,255,255,0.7)',
-                            lineHeight: 1
-                          }}>
-                            {alarm.priority}
-                          </span>
-                          <span className="truncate" style={{ fontWeight: 600, color: '#1e293b', flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                            <span style={{
+                              fontSize: '9px',
+                              fontWeight: 800,
+                              textTransform: 'uppercase',
+                              color: color,
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              background: 'rgba(255,255,255,0.85)',
+                              lineHeight: 1
+                            }}>
+                              {alarm.priority}
+                            </span>
+                            {alarm.deptLabel && (
+                              <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#334155' }}>
+                                [{alarm.deptLabel}]
+                              </span>
+                            )}
+                            {alarm.date && (
+                              <span style={{ fontSize: '10px', color: '#64748b', marginLeft: 'auto', fontWeight: 500 }}>
+                                📅 {alarm.date}
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontWeight: 600, color: '#0f172a', fontSize: '11.5px', lineHeight: 1.35, wordBreak: 'break-word' }}>
                             {alarm.note || 'Pending review'}
-                          </span>
+                          </div>
                         </div>
                       );
                     })}
-                    {alarms.length > 2 && (
-                      <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 600 }}>
-                        +{alarms.length - 2} more active alarms
-                      </span>
-                    )}
                   </div>
                 )}
 
