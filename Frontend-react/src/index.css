@@ -1046,20 +1046,28 @@ textarea {
 
 .gate-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 12px 16px;
+}
+
+@media (min-width: 640px) {
+  .gate-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .gate-item {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
 }
 
 .gate-item label {
   font-size: 11px;
   font-weight: 700;
   color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .gate-item select {

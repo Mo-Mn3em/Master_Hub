@@ -1543,6 +1543,7 @@ export const PatientForm: React.FC = () => {
                       <div className="gate-block">
                         <h5>Clinical Gatekeeper Checklist</h5>
                         <div 
+                          className="gate-grid"
                           dangerouslySetInnerHTML={{ __html: dept.customGates }}
                         />
                       </div>
