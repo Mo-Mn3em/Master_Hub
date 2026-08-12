@@ -361,12 +361,10 @@ class CasesController extends Controller
 
         // 4. Sync pure pivot case_department junction table and update programs multiline string
         $uniqueEnrolledIds = array_unique($enrolledDeptIds);
-        if (!empty($uniqueEnrolledIds)) {
-            $case->departments()->sync($uniqueEnrolledIds);
+        $case->departments()->sync($uniqueEnrolledIds);
 
-            // Re-build programs multiline linked list from enrolled department names
-            $enrolledNames = Department::whereIn('id', $uniqueEnrolledIds)->pluck('name')->toArray();
-            $case->update(['programs' => implode("\n", $enrolledNames)]);
-        }
+        // Re-build programs multiline linked list from enrolled department names
+        $enrolledNames = Department::whereIn('id', $uniqueEnrolledIds)->pluck('name')->toArray();
+        $case->update(['programs' => implode("\n", $enrolledNames)]);
     }
 }

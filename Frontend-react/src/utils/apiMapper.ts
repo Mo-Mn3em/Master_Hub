@@ -283,7 +283,13 @@ export function patientToApi(patient: Partial<Patient>): BackendCase {
     const mappings = getFieldMappings(dept.code, dept.pfx);
     const colData = mapProgToColumn(progData, mappings);
 
-    if (progData.enrolled) {
+    const hasClinicalData = Object.entries(progData).some(([k, v]) => 
+      k !== 'enrolled' && k !== 'status' && v !== undefined && v !== null && v !== ''
+    );
+    const isEnrolled = progData.enrolled === true || (progData.enrolled !== false && hasClinicalData);
+
+    if (isEnrolled) {
+      colData.status = 'enrolled';
       enrolledLabels.push(dept.label);
       (payload.departments as any[]).push({
         code: dept.code,
