@@ -1480,8 +1480,7 @@ export const PatientForm: React.FC = () => {
                   {renderAlarmBlock('basSoc', 'Demographics / Social Followup', 'hub')}
                 </div>
               </div>
-            )}
-          </div>
+            </div>
 
           {/* ============================================================== */}
           {/* 2. Specialized Clinic Accordions (Dynamic HTML insertion) */}
