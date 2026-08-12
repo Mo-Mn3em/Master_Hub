@@ -479,21 +479,25 @@ export const PatientForm: React.FC = () => {
       const prog: Record<string, any> = localPatient.programs?.[dept.code] || {};
 
       block.querySelectorAll('input, select, textarea').forEach((el: any) => {
-        if (!el.id) return;
-        
-        // Skip alarm elements, handle them separately
-        if (/AlarmActive|AlarmDate|AlarmNote|Priority/.test(el.id)) return;
-        if (el.id.startsWith('enr_')) return;
+        if (!el.id || el.id.startsWith('enr_')) return;
 
-        let key = el.id;
-        if (key.startsWith(pfx + '_')) key = key.slice(pfx.length + 1);
-        else if (key.startsWith(dept.code + '_')) key = key.slice(dept.code.length + 1);
+        // Check if alarm element
+        const alarmMatch = el.id.match(/^(\w+)(AlarmActive|AlarmDate|AlarmNote|Priority)$/);
+        let val: any;
+        if (alarmMatch) {
+          val = prog[el.id];
+        } else {
+          let key = el.id;
+          if (key.startsWith(pfx + '_')) key = key.slice(pfx.length + 1);
+          else if (key.startsWith(dept.code + '_')) key = key.slice(dept.code.length + 1);
+          if (!key) return;
+          val = prog[key];
+        }
 
-        if (!key) return;
-
-        const val = prog[key];
         if (el.type === 'checkbox') {
           el.checked = !!val;
+        } else if (el.type === 'radio') {
+          el.checked = el.value === (val || 'red');
         } else {
           el.value = val !== undefined ? val : '';
         }
@@ -698,9 +702,52 @@ export const PatientForm: React.FC = () => {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Collect 100% of current DOM values from form inputs across all departments
+    const updatedPrograms = { ...(localPatient.programs || {}) };
+    if (formRef.current) {
+      DEPARTMENTS.forEach(dept => {
+        const block = document.getElementById(`block_${dept.code}`);
+        if (!block) return;
+
+        const pfx = dept.pfx || dept.code;
+        const currentProg = { ...(updatedPrograms[dept.code] || { enrolled: true }) };
+
+        block.querySelectorAll('input, select, textarea').forEach((el: any) => {
+          if (!el.id || el.id.startsWith('enr_')) return;
+
+          const val = el.type === 'checkbox' ? el.checked : el.value;
+
+          const alarmMatch = el.id.match(/^(\w+)(AlarmActive|AlarmDate|AlarmNote|Priority)$/);
+          if (alarmMatch) {
+            currentProg[el.id] = val;
+            return;
+          }
+
+          let key = el.id;
+          if (key.startsWith(pfx + '_')) key = key.slice(pfx.length + 1);
+          else if (key.startsWith(dept.code + '_')) key = key.slice(dept.code.length + 1);
+
+          if (key) {
+            currentProg[key] = val;
+          }
+        });
+
+        const hasClinicalData = Object.entries(currentProg).some(([k, v]) => 
+          k !== 'enrolled' && k !== 'status' && v !== undefined && v !== null && v !== ''
+        );
+        currentProg.enrolled = currentProg.enrolled === true || (currentProg.enrolled !== false && hasClinicalData);
+        updatedPrograms[dept.code] = currentProg;
+      });
+    }
+
+    const patientToSave: Patient = {
+      ...localPatient,
+      programs: updatedPrograms,
+    };
+
     // Verification check for Anesthesia unfit reason
-    if (enrolledClinics.anes && (localPatient.programs?.anes as Record<string, any>)?.assessmentStatus === 'unfit') {
-      const reason = (localPatient.programs?.anes as Record<string, any>)?.unfitReason;
+    if (enrolledClinics.anes && (patientToSave.programs?.anes as Record<string, any>)?.assessmentStatus === 'unfit') {
+      const reason = (patientToSave.programs?.anes as Record<string, any>)?.unfitReason;
       if (!reason || !reason.trim()) {
         alert("Action Blocked: You marked the patient as Unfit for Anesthesia but did not provide a reason.\n\nPlease fill the Anesthesia block's Unfit Reason field.");
         setActiveAccordion('anes');
@@ -709,7 +756,7 @@ export const PatientForm: React.FC = () => {
     }
 
     // Call Context Save
-    const res = await savePatient(localPatient);
+    const res = await savePatient(patientToSave);
     if (res.success) {
       setDirty(false);
       setEditingPatientId(null);
