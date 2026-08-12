@@ -498,6 +498,21 @@ export const PatientForm: React.FC = () => {
           el.value = val !== undefined ? val : '';
         }
       });
+
+      // Handle conditional wrappers (e.g. Specify Other Diagnosis / Other Limb Affected)
+      const otherConditionWrap = document.getElementById(`${pfx}_otherConditionWrapper`);
+      if (otherConditionWrap) {
+        const isOther = prog.condition === 'other';
+        otherConditionWrap.classList.toggle('hidden', !isOther);
+        otherConditionWrap.style.display = isOther ? 'block' : 'none';
+      }
+
+      const otherLimbWrap = document.getElementById(`${pfx}_otherLimbWrapper`);
+      if (otherLimbWrap) {
+        const isOtherLimb = prog.limbAffected === 'other';
+        otherLimbWrap.classList.toggle('hidden', !isOtherLimb);
+        otherLimbWrap.style.display = isOtherLimb ? 'block' : 'none';
+      }
     });
 
     // Populate blood bank fields (Special case)
@@ -601,6 +616,27 @@ export const PatientForm: React.FC = () => {
     }
 
     if (deptCode) {
+      const deptObj = DEPARTMENTS.find(d => d.code === deptCode);
+      const pfx = deptObj?.pfx || deptCode;
+
+      if (key === 'condition') {
+        const otherConditionWrap = document.getElementById(`${pfx}_otherConditionWrapper`);
+        if (otherConditionWrap) {
+          const isOther = val === 'other';
+          otherConditionWrap.classList.toggle('hidden', !isOther);
+          otherConditionWrap.style.display = isOther ? 'block' : 'none';
+        }
+      }
+
+      if (key === 'limbAffected') {
+        const otherLimbWrap = document.getElementById(`${pfx}_otherLimbWrapper`);
+        if (otherLimbWrap) {
+          const isOtherLimb = val === 'other';
+          otherLimbWrap.classList.toggle('hidden', !isOtherLimb);
+          otherLimbWrap.style.display = isOtherLimb ? 'block' : 'none';
+        }
+      }
+
       setLocalPatient(prev => {
         const prog = prev.programs?.[deptCode] || { enrolled: true };
         return {
