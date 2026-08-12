@@ -1541,7 +1541,7 @@ export const PatientForm: React.FC = () => {
                     {/* Checklist Gates Section */}
                     {dept.customGates && (
                       <div className="gate-block">
-                        <h5>✓ Clinical Gatekeeper Checklist</h5>
+                        <h5>Clinical Gatekeeper Checklist</h5>
                         <div 
                           dangerouslySetInnerHTML={{ __html: dept.customGates }}
                         />
@@ -1565,15 +1565,16 @@ export const PatientForm: React.FC = () => {
                           <div>
                             <div style={{ fontWeight: 700, color: '#991b1b', fontSize: 13 }}>Live Blocker Warnings ({autoBlockers.length})</div>
                             <div style={{ color: '#b91c1c', fontSize: 12, marginTop: 4 }}>
-                              {autoBlockers.join(' | ')}
+                              {autoBlockers.map((b, i) => <div key={i}>• {b}</div>)}
                             </div>
                           </div>
                         </>
                       ) : (
                         <>
-                          <CheckCircle className="w-5 h-5 text-emerald-600" />
-                          <div style={{ fontWeight: 700, color: '#065f46', fontSize: 13 }}>
-                            All checklist gates cleared. Ready for surgery scheduling.
+                          <CheckCircle className="w-5 h-5 text-green-600" />
+                          <div>
+                            <div style={{ fontWeight: 700, color: '#166534', fontSize: 13 }}>All Gatekeeper Checks Clear</div>
+                            <div style={{ color: '#15803d', fontSize: 12, marginTop: 2 }}>This patient meets all clinical criteria to proceed to surgery.</div>
                           </div>
                         </>
                       )}
