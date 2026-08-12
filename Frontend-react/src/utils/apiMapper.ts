@@ -289,10 +289,9 @@ export function patientToApi(patient: Partial<Patient>): BackendCase {
         code: dept.code,
         data: colData,
       });
+      (payload as any)[dept.relation] = colData;
+      (payload as any)[dept.legacyColumn] = colData;
     }
-
-    (payload as any)[dept.relation] = colData;
-    (payload as any)[dept.legacyColumn] = colData;
   });
 
   payload.programs = enrolledLabels.join('\n');

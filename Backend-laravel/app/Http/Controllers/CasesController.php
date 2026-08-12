@@ -306,12 +306,16 @@ class CasesController extends Controller
             if ($request->has($colName) && $deptMaster) {
                 $data = $request->input($colName);
                 if (is_array($data) && !empty($data)) {
-                    $modelClass = $mapInfo['model'];
-                    $modelClass::updateOrCreate(
-                        ['case_id' => $case->id],
-                        $data
-                    );
-                    $enrolledDeptIds[] = $deptMaster->id;
+                    $hasEnrolledStatus = isset($data['status']) && strtolower((string)$data['status']) === 'enrolled';
+                    $hasMeaningfulData = collect($data)->filter(fn($v) => !is_null($v) && $v !== '' && $v !== false)->count() > 0;
+                    if ($hasEnrolledStatus || $hasMeaningfulData) {
+                        $modelClass = $mapInfo['model'];
+                        $modelClass::updateOrCreate(
+                            ['case_id' => $case->id],
+                            $data
+                        );
+                        $enrolledDeptIds[] = $deptMaster->id;
+                    }
                 }
             }
         }
