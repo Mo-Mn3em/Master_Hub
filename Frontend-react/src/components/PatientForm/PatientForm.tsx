@@ -545,7 +545,7 @@ export const PatientForm: React.FC = () => {
   }, [localPatient.programs, enrolledClinics, activeAccordion]);
 
   // 2. Global change handler for input delegation
-  const handleFormChange = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleFormChange = (e: React.SyntheticEvent<any>) => {
     const el = e.target as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
     if (!el.id) return;
     setDirty(true);
