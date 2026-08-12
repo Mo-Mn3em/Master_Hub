@@ -745,16 +745,6 @@ export const PatientForm: React.FC = () => {
       programs: updatedPrograms,
     };
 
-    // Verification check for Anesthesia unfit reason
-    if (enrolledClinics.anes && (patientToSave.programs?.anes as Record<string, any>)?.assessmentStatus === 'unfit') {
-      const reason = (patientToSave.programs?.anes as Record<string, any>)?.unfitReason;
-      if (!reason || !reason.trim()) {
-        alert("Action Blocked: You marked the patient as Unfit for Anesthesia but did not provide a reason.\n\nPlease fill the Anesthesia block's Unfit Reason field.");
-        setActiveAccordion('anes');
-        return;
-      }
-    }
-
     // Call Context Save
     const res = await savePatient(patientToSave);
     if (res.success) {
@@ -1220,8 +1210,10 @@ export const PatientForm: React.FC = () => {
               {activeAccordion === 'demographics' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </div>
             
-            {activeAccordion === 'demographics' && (
-              <div className="program-block-content">
+            <div 
+              className="program-block-content"
+              style={{ display: activeAccordion === 'demographics' ? 'block' : 'none' }}
+            >
                 <div className="form-grid three">
                   <div className="form-group">
                     <label>Medical Record Number (MRN) *</label>
@@ -1516,9 +1508,10 @@ export const PatientForm: React.FC = () => {
                   {activeAccordion === dept.code ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </div>
 
-                {activeAccordion === dept.code && (
-                  <div className="program-block-content">
-                    
+                <div 
+                  className="program-block-content"
+                  style={{ display: activeAccordion === dept.code ? 'block' : 'none' }}
+                >
                     {/* Custom HTML Form Injected from departmentsData */}
                     {dept.customForm && (
                       <div 
@@ -1581,8 +1574,7 @@ export const PatientForm: React.FC = () => {
                       )}
                     </div>
 
-                  </div>
-                )}
+                </div>
               </div>
             );
           })}
@@ -1604,8 +1596,10 @@ export const PatientForm: React.FC = () => {
                 {activeAccordion === 'anes' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               </div>
 
-              {activeAccordion === 'anes' && (
-                <div className="program-block-content">
+              <div 
+                className="program-block-content"
+                style={{ display: activeAccordion === 'anes' ? 'block' : 'none' }}
+              >
                   <div className="form-group">
                     <label>Requested Operation / Surgical Procedure</label>
                     <input 
@@ -1787,9 +1781,8 @@ export const PatientForm: React.FC = () => {
                     {renderAlarmBlock('anesPreop', 'Anesthesia Fitness / Pre-op Followup', 'anes')}
                   </div>
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            )}
 
           {/* ============================================================== */}
           {/* 4. Surgery Booking Accordion (Schedules, urgency) */}
@@ -1808,8 +1801,10 @@ export const PatientForm: React.FC = () => {
                 {activeAccordion === 'surg' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               </div>
 
-              {activeAccordion === 'surg' && (
-                <div className="program-block-content">
+              <div 
+                className="program-block-content"
+                style={{ display: activeAccordion === 'surg' ? 'block' : 'none' }}
+              >
                   
                   {/* Procedural String builder */}
                   <div className="form-group">
@@ -1923,9 +1918,8 @@ export const PatientForm: React.FC = () => {
                   </div>
 
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            )}
 
           {/* ============================================================== */}
           {/* 5. Dynamic Research Study Data Entry Fields */}
@@ -2037,7 +2031,7 @@ export const PatientForm: React.FC = () => {
                     );
                   })}
                 </div>
-              )}
+              </div>
             </div>
           )}
         </div>
