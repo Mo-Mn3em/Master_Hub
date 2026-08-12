@@ -1934,8 +1934,10 @@ export const PatientForm: React.FC = () => {
                 {activeAccordion === 'research_studies' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               </div>
 
-              {activeAccordion === 'research_studies' && (
-                <div className="program-block-content">
+              <div 
+                className="program-block-content"
+                style={{ display: activeAccordion === 'research_studies' ? 'block' : 'none' }}
+              >
                   <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 16 }}>
                     Associate this patient record with research studies and enter data points.
                   </p>
@@ -2031,9 +2033,7 @@ export const PatientForm: React.FC = () => {
                   })}
                 </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
       </form>
 
       {/* ── Warning Dialogs (Dirty Form / Delete confirmations) ── */}
