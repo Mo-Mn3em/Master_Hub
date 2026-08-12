@@ -1231,7 +1231,7 @@ export const PatientForm: React.FC = () => {
                       required 
                       placeholder="e.g. 2026-9041"
                       value={localPatient.bas_mrn || ''}
-                      onChange={() => {}} // bound in onChange wrapper
+                      onChange={handleFormChange}
                     />
                   </div>
                   <div className="form-group">
@@ -1242,7 +1242,7 @@ export const PatientForm: React.FC = () => {
                       required 
                       placeholder="First Middle Lastname"
                       value={localPatient.bas_name || ''}
-                      onChange={() => {}}
+                      onChange={handleFormChange}
                     />
                   </div>
                   <div className="form-group">
@@ -1251,7 +1251,7 @@ export const PatientForm: React.FC = () => {
                       id="bas_gender" 
                       required 
                       value={localPatient.bas_gender || ''}
-                      onChange={() => {}}
+                      onChange={handleFormChange}
                     >
                       <option value="" disabled>Select Gender</option>
                       <option value="male">Male</option>
@@ -1268,7 +1268,7 @@ export const PatientForm: React.FC = () => {
                       id="bas_dob" 
                       required
                       value={localPatient.bas_dob || ''}
-                      onChange={() => {}}
+                      onChange={handleFormChange}
                     />
                   </div>
                   <div className="form-group">
@@ -1285,7 +1285,7 @@ export const PatientForm: React.FC = () => {
                     <select 
                       id="bas_gov"
                       value={localPatient.bas_gov || ''}
-                      onChange={() => {}}
+                      onChange={handleFormChange}
                     >
                       <option value="">Select Governorate</option>
                       <option value="Alexandria">Alexandria</option>
@@ -1316,7 +1316,7 @@ export const PatientForm: React.FC = () => {
                         id="bas_phone"
                         placeholder="e.g. 01008365961"
                         value={localPatient.bas_phone || ''}
-                        onChange={() => {}}
+                        onChange={handleFormChange}
                       />
                     </div>
                     <div className="form-group">
@@ -1324,7 +1324,7 @@ export const PatientForm: React.FC = () => {
                       <select
                         id="bas_typeOfId"
                         value={localPatient.bas_typeOfId || 'SSN'}
-                        onChange={() => {}}
+                        onChange={handleFormChange}
                       >
                         <option value="SSN">SSN (Social Security / National ID)</option>
                         <option value="NationalID">National ID</option>
@@ -1339,7 +1339,7 @@ export const PatientForm: React.FC = () => {
                         id="bas_ssn"
                         placeholder="e.g. 30002020200712"
                         value={localPatient.bas_ssn || localPatient.bas_mrn || ''}
-                        onChange={() => {}}
+                        onChange={handleFormChange}
                       />
                     </div>
                   </div>
@@ -1389,7 +1389,7 @@ export const PatientForm: React.FC = () => {
                     <select 
                       id="bas_blood"
                       value={localPatient.bas_blood || ''}
-                      onChange={() => {}}
+                      onChange={handleFormChange}
                     >
                       <option value="">Unknown</option>
                       <option value="A+">A+</option>
@@ -1408,7 +1408,7 @@ export const PatientForm: React.FC = () => {
                       type="date" 
                       id="bas_joinRequestDate"
                       value={localPatient.bas_joinRequestDate || ''}
-                      onChange={() => {}}
+                      onChange={handleFormChange}
                     />
                   </div>
                 </div>
@@ -1424,7 +1424,7 @@ export const PatientForm: React.FC = () => {
                           name="bas_motorProblem" 
                           value="no" 
                           checked={localPatient.bas_motorProblem === 'no'}
-                          onChange={() => {}}
+                          onChange={handleFormChange}
                         /> Normal Mobility
                       </label>
                       <label className="radio-item">
@@ -1434,7 +1434,7 @@ export const PatientForm: React.FC = () => {
                           name="bas_motorProblem" 
                           value="yes" 
                           checked={localPatient.bas_motorProblem === 'yes'}
-                          onChange={() => {}}
+                          onChange={handleFormChange}
                         /> Impaired Mobility (Motor Issue)
                       </label>
                     </div>
@@ -1444,7 +1444,7 @@ export const PatientForm: React.FC = () => {
                         id="bas_motorProblemDetail" 
                         placeholder="Specify motor details (e.g. wheelchair, limp, palsy)..."
                         value={localPatient.bas_motorProblemDetail || ''}
-                        onChange={() => {}}
+                        onChange={handleFormChange}
                         style={{ marginTop: 8 }}
                       />
                     )}
@@ -1458,7 +1458,7 @@ export const PatientForm: React.FC = () => {
                       id="bas_history" 
                       placeholder="Add clinical context, previous surgeries, comorbidities..."
                       value={localPatient.bas_history || ''}
-                      onChange={() => {}}
+                      onChange={handleFormChange}
                     />
                   </div>
                   <div className="form-group">
@@ -1467,7 +1467,7 @@ export const PatientForm: React.FC = () => {
                       id="bas_social" 
                       placeholder="Financial issues, charity sponsorships, travel accommodations..."
                       value={localPatient.bas_social || ''}
-                      onChange={() => {}}
+                      onChange={handleFormChange}
                     />
                   </div>
                 </div>
@@ -1479,7 +1479,7 @@ export const PatientForm: React.FC = () => {
                     id="bas_acceptanceCause" 
                     placeholder="e.g. Charity orthopedic program sponsor"
                     value={localPatient.bas_acceptanceCause || ''}
-                    onChange={() => {}}
+                    onChange={handleFormChange}
                   />
                 </div>
 
@@ -1613,7 +1613,7 @@ export const PatientForm: React.FC = () => {
                       id="anes_reqOpName"
                       placeholder="Type operation name or append below..."
                       value={localPatient.programs?.anes?.reqOpName || ''}
-                      onChange={() => {}}
+                      onChange={handleFormChange}
                     />
                   </div>
 
@@ -1623,7 +1623,7 @@ export const PatientForm: React.FC = () => {
                       <select 
                         id="anes_assessmentStatus"
                         value={localPatient.programs?.anes?.assessmentStatus || 'pending'}
-                        onChange={() => {}}
+                        onChange={handleFormChange}
                       >
                         <option value="pending">Pending Review</option>
                         <option value="fit">Fit for Surgery</option>
@@ -1637,7 +1637,7 @@ export const PatientForm: React.FC = () => {
                         type="date" 
                         id="anes_assessmentDate"
                         value={localPatient.programs?.anes?.assessmentDate || ''}
-                        onChange={() => {}}
+                        onChange={handleFormChange}
                       />
                     </div>
                     <div className="form-group">
@@ -1645,7 +1645,7 @@ export const PatientForm: React.FC = () => {
                       <select 
                         id="anes_consentSigned"
                         value={localPatient.programs?.anes?.consentSigned || 'pending'}
-                        onChange={() => {}}
+                        onChange={handleFormChange}
                       >
                         <option value="pending">Awaiting / Missing</option>
                         <option value="done">Done / Signed</option>
@@ -1662,7 +1662,7 @@ export const PatientForm: React.FC = () => {
                         id="anes_unfitReason" 
                         placeholder="e.g. Severe chest infection, high cardiac risks..."
                         value={localPatient.programs?.anes?.unfitReason || ''}
-                        onChange={() => {}}
+                        onChange={handleFormChange}
                         required
                       />
                     </div>
@@ -1700,7 +1700,7 @@ export const PatientForm: React.FC = () => {
                       <select 
                         id="anes_labsOk"
                         value={localPatient.programs?.anes?.labsOk || 'pending'}
-                        onChange={() => {}}
+                        onChange={handleFormChange}
                       >
                         <option value="pending">Pending</option>
                         <option value="done">Normal / Ok</option>
@@ -1712,7 +1712,7 @@ export const PatientForm: React.FC = () => {
                       <select 
                         id="anes_cardiacClear"
                         value={localPatient.programs?.anes?.cardiacClear || 'pending'}
-                        onChange={() => {}}
+                        onChange={handleFormChange}
                       >
                         <option value="pending">Pending Clear</option>
                         <option value="done">Cleared / Normal</option>
@@ -1724,7 +1724,7 @@ export const PatientForm: React.FC = () => {
                       <select 
                         id="anes_postDest"
                         value={localPatient.programs?.anes?.postDest || 'pending'}
-                        onChange={() => {}}
+                        onChange={handleFormChange}
                       >
                         <option value="pending">Pending Choice</option>
                         <option value="ward">Ward</option>
@@ -1742,7 +1742,7 @@ export const PatientForm: React.FC = () => {
                         id="anes_overallBloodReady" 
                         style={{ width: 'auto', padding: '4px 28px 4px 10px', fontSize: 12 }}
                         value={localPatient.programs?.anes?.overallBloodReady || 'pending'}
-                        onChange={() => {}}
+                        onChange={handleFormChange}
                       >
                         <option value="not_needed">Not Needed</option>
                         <option value="pending">Pending Crossmatch</option>
@@ -1763,13 +1763,13 @@ export const PatientForm: React.FC = () => {
                               placeholder="Units" 
                               style={{ padding: 6, fontSize: 12 }}
                               value={units}
-                              onChange={() => {}}
+                              onChange={handleFormChange}
                             />
                             <select 
                               id={`anes_${bloodType}Status`} 
                               style={{ padding: 6, fontSize: 11 }}
                               value={status}
-                              onChange={() => {}}
+                              onChange={handleFormChange}
                             >
                               <option value="not_needed">None</option>
                               <option value="pending">Pending</option>
@@ -1819,7 +1819,7 @@ export const PatientForm: React.FC = () => {
                       id="surg_opName"
                       placeholder="Build procedural string below or type here..."
                       value={localPatient.programs?.surg?.opName || ''}
-                      onChange={() => {}}
+                      onChange={handleFormChange}
                       required
                     />
                     
@@ -1852,7 +1852,7 @@ export const PatientForm: React.FC = () => {
                         type="date" 
                         id="surg_scheduledDate"
                         value={localPatient.programs?.surg?.scheduledDate || ''}
-                        onChange={() => {}}
+                        onChange={handleFormChange}
                       />
                     </div>
                     
@@ -1861,7 +1861,7 @@ export const PatientForm: React.FC = () => {
                       <select 
                         id="surg_urgency"
                         value={localPatient.programs?.surg?.urgency || 'none'}
-                        onChange={() => {}}
+                        onChange={handleFormChange}
                       >
                         <option value="none">Not Scheduled / None</option>
                         <option value="emergency">Emergency / Salvage</option>
@@ -1877,7 +1877,7 @@ export const PatientForm: React.FC = () => {
                         type="date" 
                         id="surg_fitDate"
                         value={localPatient.programs?.surg?.fitDate || ''}
-                        onChange={() => {}}
+                        onChange={handleFormChange}
                       />
                     </div>
                   </div>
@@ -1888,7 +1888,7 @@ export const PatientForm: React.FC = () => {
                       <select 
                         id="surg_consent"
                         value={localPatient.programs?.surg?.consent || ''}
-                        onChange={() => {}}
+                        onChange={handleFormChange}
                       >
                         <option value="">Awaiting</option>
                         <option value="yes">Signed & Verified (Yes)</option>
@@ -1900,7 +1900,7 @@ export const PatientForm: React.FC = () => {
                       <select 
                         id="surg_postDest"
                         value={localPatient.programs?.surg?.postDest || ''}
-                        onChange={() => {}}
+                        onChange={handleFormChange}
                       >
                         <option value="">Select Destination</option>
                         <option value="ward">Ward Bed</option>
@@ -1913,7 +1913,7 @@ export const PatientForm: React.FC = () => {
                       <select 
                         id="surg_labsOk"
                         value={localPatient.programs?.surg?.labsOk || ''}
-                        onChange={() => {}}
+                        onChange={handleFormChange}
                       >
                         <option value="">Awaiting Results</option>
                         <option value="yes">Normal / Ready (Yes)</option>
