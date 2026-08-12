@@ -340,6 +340,11 @@ export const PatientForm: React.FC = () => {
         }
       });
       setEnrolledClinics(enrolls);
+
+      // Auto-open Surgical List panel if case is on the Surgical List
+      if (isOnSurgicalList) {
+        setActiveAccordion('surg');
+      }
     } else {
       // Setup empty structure
       const emptyEnrolls: { [code: string]: boolean } = {};
