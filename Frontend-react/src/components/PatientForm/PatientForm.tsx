@@ -740,7 +740,7 @@ export const PatientForm: React.FC = () => {
       });
     }
 
-    const patientToSave: Patient = {
+    const patientToSave: Partial<Patient> = {
       ...localPatient,
       programs: updatedPrograms,
     };
