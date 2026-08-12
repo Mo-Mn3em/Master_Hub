@@ -2034,6 +2034,7 @@ export const PatientForm: React.FC = () => {
                 </div>
               </div>
             )}
+        </div>
       </form>
 
       {/* ── Warning Dialogs (Dirty Form / Delete confirmations) ── */}
