@@ -27,48 +27,57 @@ export const Login: React.FC = () => {
   return (
     <div id="loginWrapper">
       <div className="login-box">
-        <div style={{ textAlign: 'center', marginBottom: 28 }}>
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div style={{
-            width: 72,
-            height: 72,
-            background: 'white',
-            borderRadius: 14,
+            width: 76,
+            height: 76,
+            background: '#ffffff',
+            borderRadius: 16,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            margin: '0 auto 14px',
+            margin: '0 auto 16px',
             overflow: 'hidden',
             padding: 4,
-            boxShadow: '0 4px 10px rgba(0,0,0,0.2)'
+            border: '1px solid #e2e8f0',
+            boxShadow: '0 4px 14px rgba(15, 23, 42, 0.06)'
           }}>
-            <img src="/NOH_logo.jpg" alt="NOH Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 10 }} />
+            <img src="/NOH_logo.jpg" alt="NOH Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 12 }} />
           </div>
-          <h2>Hospital Master Hub</h2>
-          <p>Unified Coordinator Portal</p>
+          <h2 style={{ color: '#0f172a', fontSize: '22px', fontWeight: 600, letterSpacing: '-0.01em', marginBottom: 4 }}>
+            Hospital Master Hub
+          </h2>
+          <p style={{ color: '#0f766e', fontSize: '13px', fontWeight: 500 }}>
+            Unified Coordinator Portal
+          </p>
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label style={{ color: '#9ca3af' }}>Username</label>
+          <div className="form-group" style={{ marginBottom: 18 }}>
+            <label style={{ color: '#334155', fontWeight: 600, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.03em', marginBottom: 6, display: 'block' }}>
+              Username
+            </label>
             <div style={{ position: 'relative' }}>
-              <User className="w-4 h-4 text-slate-500" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
+              <User className="w-4 h-4" style={{ color: '#0f766e', position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
               <input
                 type="text"
                 id="loginUsername"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="Your name as in the system"
+                placeholder="Your coordinator username"
                 required
                 autoComplete="username"
-                style={{ paddingLeft: 38 }}
+                style={{ paddingLeft: 42, background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a', borderRadius: '10px' }}
               />
             </div>
           </div>
 
-          <div className="form-group">
-            <label style={{ color: '#9ca3af' }}>Password</label>
+          <div className="form-group" style={{ marginBottom: 20 }}>
+            <label style={{ color: '#334155', fontWeight: 600, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.03em', marginBottom: 6, display: 'block' }}>
+              Password
+            </label>
             <div style={{ position: 'relative' }}>
-              <Lock className="w-4 h-4 text-slate-500" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
+              <Lock className="w-4 h-4" style={{ color: '#0f766e', position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
               <input
                 type="password"
                 id="loginPassword"
@@ -77,25 +86,38 @@ export const Login: React.FC = () => {
                 placeholder="••••••••"
                 required
                 autoComplete="current-password"
-                style={{ paddingLeft: 38 }}
+                style={{ paddingLeft: 42, background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a', borderRadius: '10px' }}
               />
             </div>
           </div>
 
           {error && (
-            <div style={{ color: 'var(--danger)', fontSize: 12, marginTop: 8, textAlign: 'left', background: 'rgba(239,68,68,0.1)', borderRadius: 8, padding: '8px 12px' }}>
+            <div style={{ color: '#dc2626', fontSize: '12px', marginBottom: 16, textAlign: 'left', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '10px 14px', fontWeight: 500 }}>
               ⚠️ {error}
             </div>
           )}
 
           <button
             type="submit"
-            className="btn btn-primary"
+            className="btn"
             disabled={loading}
-            style={{ width: '100%', justifyContent: 'center', marginTop: 16 }}
+            style={{ 
+              width: '100%', 
+              justifyContent: 'center', 
+              marginTop: 8,
+              padding: '12px 20px',
+              fontSize: '14px',
+              fontWeight: 600,
+              background: '#0f766e',
+              color: '#ffffff',
+              borderRadius: '10px',
+              border: 'none',
+              boxShadow: '0 4px 12px rgba(15, 118, 110, 0.25)',
+              cursor: loading ? 'not-allowed' : 'pointer'
+            }}
           >
             <LogIn className="w-4 h-4" />
-            {loading ? 'Signing in...' : 'Sign In'}
+            <span>{loading ? 'Signing in...' : 'Sign In'}</span>
           </button>
         </form>
       </div>

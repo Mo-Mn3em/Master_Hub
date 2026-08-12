@@ -1256,50 +1256,73 @@ textarea {
 #loginWrapper {
   position: fixed;
   inset: 0;
-  background: var(--nav-bg);
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%);
   z-index: 200;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-image: radial-gradient(ellipse at 20% 50%, rgba(20, 184, 166, 0.05) 0%, transparent 60%),
-                    radial-gradient(ellipse at 80% 20%, rgba(59, 130, 246, 0.05) 0%, transparent 60%);
+  background-image: radial-gradient(circle at 15% 20%, rgba(15, 118, 110, 0.08) 0%, transparent 45%),
+                    radial-gradient(circle at 85% 80%, rgba(37, 99, 235, 0.06) 0%, transparent 45%);
 }
 
 .login-box {
-  background: #111827;
-  padding: 44px 36px;
-  border-radius: 20px;
+  background: #ffffff;
+  padding: 44px 38px;
+  border-radius: 24px;
   width: 90%;
-  max-width: 420px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  max-width: 430px;
+  box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.08), 0 10px 15px -3px rgba(15, 23, 42, 0.04);
+  border: 1px solid #e2e8f0;
+  position: relative;
+  overflow: hidden;
+  animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.login-box::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #0f766e 0%, #2563eb 100%);
 }
 
 .login-box h2 {
-  color: #f9fafb;
+  color: #0f172a;
   font-size: 22px;
-  margin-bottom: 6px;
-  font-weight: 700;
+  margin-bottom: 4px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .login-box p {
-  color: var(--nav-text);
-  font-size: 13.5px;
+  color: #0f766e;
+  font-size: 13px;
+  font-weight: 500;
   margin-bottom: 28px;
 }
 
 .login-box label {
-  color: #9ca3af;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .login-box input {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.15);
-  color: #ffffff;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #0f172a;
+  border-radius: 10px;
+  transition: all 0.2s ease;
 }
 
 .login-box input:focus {
-  border-color: var(--accent-light);
+  border-color: #0f766e;
+  box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.12);
+  outline: none;
 }
 
 .dev-banner {
