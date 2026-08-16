@@ -494,7 +494,7 @@ export const GlobalDirectory: React.FC = () => {
                       {code}
                     </span>
                   ))}
-                  {patient.programs?.surg?.enrolled && (
+                  {patient.programs?.surg?.enrolled && patient.programs?.surg?.stage !== 'completed' && (
                     <span 
                       className="prog-badge" 
                       style={{ backgroundColor: '#15803d' }}

@@ -1,7 +1,7 @@
-# Master_Hub
+# PCC (Patient Coordinator Center)
 
 ## Overview
-**Master Hub** is a full‑stack case‑management system for healthcare professionals. It centralises patient records, admission requests, department‑specific clinic enrollments, research study data, and social‑follow‑up alarms. The stack consists of:
+**PCC (Patient Coordinator Center)** is a full‑stack case‑management system for healthcare professionals and medical coordinators. It centralises patient records, admission requests, department‑specific clinic enrollments, research study data, and social‑follow‑up alarms. The stack consists of:
 - **Laravel (PHP 8.3)** backend API
 - **React (Vite, TypeScript)** frontend UI
 - **MySQL 8.0** database with **phpMyAdmin** for inspection
@@ -144,4 +144,4 @@ export default defineConfig({
 - Write end‑to‑end tests using Cypress or Playwright against the Docker services.
 
 ---
-Feel free to open issues or submit pull requests. Enjoy building with **Master Hub**!
+Feel free to open issues or submit pull requests. Enjoy building with **PCC (Patient Coordinator Center)**!

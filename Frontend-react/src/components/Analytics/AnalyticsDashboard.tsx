@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
-import type { Patient } from '../../types';
 import DEPARTMENTS from '../../utils/departmentsData';
-import { getDynamicAge, REPORT_LBL_MAP } from '../../utils/clinicalRules';
+import { REPORT_LBL_MAP } from '../../utils/clinicalRules';
 import { exportAnalyticsToExcel } from '../../utils/excel';
-import { Calendar, Filter, BarChart3, TrendingUp, AlertTriangle, Users, Award, Download, ArrowRight } from 'lucide-react';
+import { Calendar, Filter, BarChart3, TrendingUp, Users, Award, Download, ArrowRight } from 'lucide-react';
 
 const DIAGNOSIS_LABEL_MAP: { [key: string]: string } = {
   // Spine
@@ -903,7 +902,7 @@ export const AnalyticsDashboard: React.FC = () => {
                 const barWidth = Math.min(100, (count / safeWaiting) * 100);
                 return (
                   <div key={blocker} style={{ marginBottom: 12 }}>
-                    <div style={{ display: 'flex', justifyContext: 'space-between', justifyContent: 'space-between', fontSize: 12, fontWeight: 700, marginBottom: 4, color: '#475569' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 700, marginBottom: 4, color: '#475569' }}>
                       <span>{blocker}</span>
                       <span>{count}</span>
                     </div>

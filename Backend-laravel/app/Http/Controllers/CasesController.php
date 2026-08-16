@@ -206,6 +206,7 @@ class CasesController extends Controller
     public function show(Cases $case)
     {
         $case->load(self::$deptRelations);
+        $case->past_surgeries = $case->research['past_surgeries'] ?? [];
         return response()->json($case);
     }
 
@@ -220,6 +221,7 @@ class CasesController extends Controller
         });
 
         $case->load(self::$deptRelations);
+        $case->past_surgeries = $case->research['past_surgeries'] ?? [];
         return response()->json($case);
     }
 
@@ -257,11 +259,24 @@ class CasesController extends Controller
             'programs'                => 'nullable',
             'departments'             => 'nullable',
             'research'                => 'nullable|array',
+            'past_surgeries'          => 'nullable',
         ]);
 
         $data = $validator->validate();
         if (isset($data['programs']) && is_array($data['programs'])) {
             $data['programs'] = implode("\n", array_filter($data['programs']));
+        }
+
+        if ($request->has('past_surgeries')) {
+            $researchData = $data['research'] ?? [];
+            if (!is_array($researchData)) $researchData = [];
+            $pastSurgeriesInput = $request->input('past_surgeries');
+            if (is_string($pastSurgeriesInput)) {
+                try { $pastSurgeriesInput = json_decode($pastSurgeriesInput, true); } catch (\Exception $e) {}
+            }
+            $researchData['past_surgeries'] = is_array($pastSurgeriesInput) ? $pastSurgeriesInput : [];
+            $data['research'] = $researchData;
+            unset($data['past_surgeries']);
         }
         return $data;
     }
@@ -295,61 +310,124 @@ class CasesController extends Controller
                     $data
                 );
 
-                $enrolledDeptIds[] = $deptMaster->id;
-            }
-        }
+                $isEnrolled = false;
+                if (isset($item['enrolled'])) {
+                    $isEnrolled = filter_var($item['enrolled'], FILTER_VALIDATE_BOOLEAN);
+                } elseif (isset($data['status'])) {
+                    $isEnrolled = strtolower((string)$data['status']) === 'enrolled';
+                }
 
-        // 2. Check legacy clinic_* fields
-        foreach ($this->deptCodeToMap as $code => $mapInfo) {
-            $colName = $mapInfo['col'];
-            $deptMaster = $allDepts->get($code);
-            if ($request->has($colName) && $deptMaster) {
-                $data = $request->input($colName);
-                if (is_array($data) && !empty($data)) {
-                    $hasEnrolledStatus = isset($data['status']) && strtolower((string)$data['status']) === 'enrolled';
-                    $hasMeaningfulData = collect($data)->filter(fn($v) => !is_null($v) && $v !== '' && $v !== false)->count() > 0;
-                    if ($hasEnrolledStatus || $hasMeaningfulData) {
+                if ($isEnrolled) {
+                    $enrolledDeptIds[] = $deptMaster->id;
+                }
+            }
+        } elseif ($request->hasAny(array_column($this->deptCodeToMap, 'col'))) {
+            // 2. Check legacy clinic_* fields only if 'departments' is not present
+            foreach ($this->deptCodeToMap as $code => $mapInfo) {
+                $colName = $mapInfo['col'];
+                $deptMaster = $allDepts->get($code);
+                if ($request->has($colName) && $deptMaster) {
+                    $data = $request->input($colName);
+                    if (is_array($data) && !empty($data)) {
+                        $hasEnrolledStatus = isset($data['status']) && strtolower((string)$data['status']) === 'enrolled';
                         $modelClass = $mapInfo['model'];
                         $modelClass::updateOrCreate(
                             ['case_id' => $case->id],
                             $data
                         );
-                        $enrolledDeptIds[] = $deptMaster->id;
+                        if ($hasEnrolledStatus) {
+                            $enrolledDeptIds[] = $deptMaster->id;
+                        }
                     }
                 }
             }
         }
 
-        // 3. Enforce Workflow Rule: Surgery Decision / Booking Request Auto-enrolls Anesthesia Clinic
+        // 3. Enforce Workflow Rule: Surgery Decision / Booking Request Auto-enrolls Anesthesia Clinic & Surgical List
         $anesMaster = $allDepts->get('anes');
-        if ($anesMaster) {
-            $hasSurgeryRequested = false;
-            $surgeryOps = [];
+        $surgMaster = $allDepts->get('surg');
 
-            // Check all dedicated department models for case
-            foreach ($this->deptCodeToMap as $code => $mapInfo) {
-                if ($code === 'anes' || $code === 'surg') continue;
-                $modelClass = $mapInfo['model'];
-                $deptRecord = $modelClass::where('case_id', $case->id)->first();
-                if ($deptRecord) {
-                    $opDecided = strtolower((string)($deptRecord->op_decided ?? ''));
-                    $bookingActive = !empty($deptRecord->surgery_booking_active);
-                    $plannedOp = trim((string)($deptRecord->planned_operation ?? ''));
+        $hasSurgeryRequested = false;
+        $surgeryOps = [];
+        $surgeryDates = [];
 
-                    if ($opDecided === 'yes' || $bookingActive || !empty($plannedOp)) {
-                        $hasSurgeryRequested = true;
-                        if (!empty($plannedOp)) {
-                            $surgeryOps[] = $plannedOp;
-                        }
+        // Check only active/enrolled dedicated department models for case
+        foreach ($this->deptCodeToMap as $code => $mapInfo) {
+            if ($code === 'anes' || $code === 'surg') continue;
+            $deptMaster = $allDepts->get($code);
+            if (!$deptMaster || !in_array($deptMaster->id, $enrolledDeptIds)) continue;
+
+            $modelClass = $mapInfo['model'];
+            $deptRecord = $modelClass::where('case_id', $case->id)->first();
+            if ($deptRecord) {
+                $opDecided = strtolower((string)($deptRecord->op_decided ?? ''));
+                $bookingActive = !empty($deptRecord->surgery_booking_active);
+                $plannedOp = trim((string)($deptRecord->planned_operation ?? ''));
+                $bookingDate = trim((string)($deptRecord->surgery_booking_date ?? ''));
+
+                if ($opDecided === 'yes' || $bookingActive || !empty($plannedOp)) {
+                    $hasSurgeryRequested = true;
+                    if (!empty($plannedOp)) {
+                        $surgeryOps[] = $plannedOp;
+                    }
+                    if (!empty($bookingDate)) {
+                        $surgeryDates[] = $bookingDate;
                     }
                 }
             }
+        }
 
-            $surgMaster = $allDepts->get('surg');
-            $surgRecord = Dept\DeptSurgicalList::where('case_id', $case->id)->first();
-            $isOnSurgicalList = ($surgMaster && in_array($surgMaster->id, $enrolledDeptIds)) || 
-                                ($surgRecord && strtolower((string)$surgRecord->status) === 'enrolled');
+        $requestedOpName = implode(' + ', array_unique($surgeryOps));
+        $requestedDate = !empty($surgeryDates) ? $surgeryDates[0] : null;
 
+        // Auto-enroll to Surgical List if Doctor chose the surgery procedure AND the date
+        if ($surgMaster && !empty($requestedOpName) && !empty($requestedDate)) {
+            $existingSurg = Dept\DeptSurgicalList::where('case_id', $case->id)->first();
+            $isAlreadyCompleted = $existingSurg && $existingSurg->stage === 'completed';
+
+            $surgUpdateData = [
+                'status' => $isAlreadyCompleted ? 'discharged' : 'enrolled',
+                'operation_name' => $requestedOpName,
+                'scheduled_date' => $requestedDate,
+            ];
+
+            if ($existingSurg) {
+                if ($isAlreadyCompleted) {
+                    $surgUpdateData['stage'] = 'completed';
+                }
+                $existingSurg->update($surgUpdateData);
+            } else {
+                Dept\DeptSurgicalList::create(array_merge(['case_id' => $case->id], $surgUpdateData));
+            }
+
+            if (!$isAlreadyCompleted && !in_array($surgMaster->id, $enrolledDeptIds)) {
+                $enrolledDeptIds[] = $surgMaster->id;
+            } elseif ($isAlreadyCompleted) {
+                $enrolledDeptIds = array_values(array_diff($enrolledDeptIds, [$surgMaster->id]));
+            }
+        }
+
+        $surgRecord = Dept\DeptSurgicalList::where('case_id', $case->id)->first();
+        if ($surgRecord && !empty($surgRecord->operation_name)) {
+            $isCompleted = $surgRecord->stage === 'completed';
+            if ($isCompleted) {
+                $surgRecord->update(['status' => 'discharged']);
+                if ($surgMaster) {
+                    $enrolledDeptIds = array_values(array_diff($enrolledDeptIds, [$surgMaster->id]));
+                }
+            } else {
+                $surgRecord->update(['status' => 'enrolled']);
+                if ($surgMaster && !in_array($surgMaster->id, $enrolledDeptIds)) {
+                    $enrolledDeptIds[] = $surgMaster->id;
+                }
+            }
+        }
+
+        $isCompletedStage = $surgRecord && $surgRecord->stage === 'completed';
+        $isOnSurgicalList = ($surgMaster && in_array($surgMaster->id, $enrolledDeptIds)) || 
+                            ($surgRecord && strtolower((string)$surgRecord->status) === 'enrolled' && !$isCompletedStage);
+
+        if ($anesMaster) {
             if ($isOnSurgicalList) {
                 // If patient is on Surgical List, close/discharge Anesthesia
                 $existingAnes = Dept\DeptAnesthesia::where('case_id', $case->id)->first();
@@ -359,8 +437,6 @@ class CasesController extends Controller
                 $enrolledDeptIds = array_values(array_diff($enrolledDeptIds, [$anesMaster->id]));
             } else if ($hasSurgeryRequested) {
                 $enrolledDeptIds[] = $anesMaster->id;
-                $requestedOpName = implode(' + ', array_unique($surgeryOps));
-
                 $existingAnes = Dept\DeptAnesthesia::where('case_id', $case->id)->first();
                 $finalOpName = !empty($requestedOpName) ? $requestedOpName : ($existingAnes?->requested_operation);
 

@@ -90,7 +90,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
             <img src="/NOH_logo.jpg" alt="NOH Logo" className="w-full h-full object-contain" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 6 }} />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="brand-text">Master Hub</div>
+            <div className="brand-text">PCC</div>
+            <div className="brand-sub">Patient Coordinator Center</div>
           </div>
         </div>
 

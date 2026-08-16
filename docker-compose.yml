@@ -1,4 +1,4 @@
-#  Master Hub — Root Docker Compose
+#  PCC (Patient Coordinator Center) — Root Docker Compose
 #  Runs 4 services:
 #    • db          → MySQL 8.0         (port 3307 on host)
 #    • phpmyadmin  → phpMyAdmin GUI    (port 8080 on host)

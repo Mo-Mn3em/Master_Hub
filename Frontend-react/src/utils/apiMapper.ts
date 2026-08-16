@@ -32,6 +32,7 @@ export interface BackendCase {
   social_alarm_priority?: string | null;
   programs?: string | string[] | null;
   departments?: BackendDepartment[];
+  past_surgeries?: any[] | string | null;
 
   // Dedicated department model relations
   dept_anesthesia?: Record<string, any> | null;
@@ -149,6 +150,9 @@ const getFieldMappings = (code: string, pfx: string): Record<string, string> => 
       opName: 'operation_name',
       scheduledDate: 'scheduled_date',
       urgency: 'urgency',
+      stage: 'stage',
+      completedDate: 'completed_date',
+      pastSurgeries: 'past_surgeries',
       fitDate: 'fitness_date',
       consent: 'consent_status',
       postDest: 'post_destination',
@@ -271,7 +275,13 @@ export function patientToApi(patient: Partial<Patient>): BackendCase {
     social_alarm_note: p.basSocAlarmNote || null,
     social_alarm_priority: p.basSocPriority || null,
     programs: [],
-    research: patient.research || {},
+    research: {
+      ...(patient.research || {}),
+      past_surgeries: patient.pastSurgeries || [],
+      surg_stage: patient.programs?.surg?.stage || null,
+      surg_completed_date: patient.programs?.surg?.completedDate || null,
+    },
+    past_surgeries: patient.pastSurgeries || [],
     departments: [],
   };
 
@@ -283,21 +293,22 @@ export function patientToApi(patient: Partial<Patient>): BackendCase {
     const mappings = getFieldMappings(dept.code, dept.pfx);
     const colData = mapProgToColumn(progData, mappings);
 
-    const hasClinicalData = Object.entries(progData).some(([k, v]) => 
-      k !== 'enrolled' && k !== 'status' && v !== undefined && v !== null && v !== ''
-    );
-    const isEnrolled = progData.enrolled === true || (progData.enrolled !== false && hasClinicalData);
+    // Respect explicit enrollment status
+    const isEnrolled = progData.enrolled === true;
+    colData.status = isEnrolled ? 'enrolled' : 'discharged';
 
     if (isEnrolled) {
-      colData.status = 'enrolled';
       enrolledLabels.push(dept.label);
-      (payload.departments as any[]).push({
-        code: dept.code,
-        data: colData,
-      });
-      (payload as any)[dept.relation] = colData;
-      (payload as any)[dept.legacyColumn] = colData;
     }
+
+    // Always preserve and send department data to database so unlinked cases do not lose clinical records
+    (payload.departments as any[]).push({
+      code: dept.code,
+      enrolled: isEnrolled,
+      data: colData,
+    });
+    (payload as any)[dept.relation] = colData;
+    (payload as any)[dept.legacyColumn] = colData;
   });
 
   payload.programs = enrolledLabels.join('\n');
@@ -305,6 +316,22 @@ export function patientToApi(patient: Partial<Patient>): BackendCase {
 }
 
 export function caseFromApi(caseData: BackendCase): Patient {
+  let pastSurgeriesList: any[] = [];
+  const rawAny = caseData as any;
+  if (Array.isArray(rawAny.past_surgeries) && rawAny.past_surgeries.length > 0) {
+    pastSurgeriesList = rawAny.past_surgeries;
+  } else if (rawAny.research && typeof rawAny.research === 'object' && Array.isArray(rawAny.research.past_surgeries) && rawAny.research.past_surgeries.length > 0) {
+    pastSurgeriesList = rawAny.research.past_surgeries;
+  } else if (typeof rawAny.past_surgeries === 'string' && rawAny.past_surgeries.trim().startsWith('[')) {
+    try { pastSurgeriesList = JSON.parse(rawAny.past_surgeries); } catch (e) {}
+  } else if (rawAny.dept_surgical_list?.past_surgeries) {
+    if (Array.isArray(rawAny.dept_surgical_list.past_surgeries)) {
+      pastSurgeriesList = rawAny.dept_surgical_list.past_surgeries;
+    } else if (typeof rawAny.dept_surgical_list.past_surgeries === 'string') {
+      try { pastSurgeriesList = JSON.parse(rawAny.dept_surgical_list.past_surgeries); } catch (e) {}
+    }
+  }
+
   const patient: Patient = {
     id: String(caseData.id),
     bas_name: caseData.full_name || '',
@@ -322,6 +349,7 @@ export function caseFromApi(caseData: BackendCase): Patient {
     bas_social: caseData.social_notes || '',
     bas_joinRequestDate: caseData.date_of_joining_request ? String(caseData.date_of_joining_request).split('T')[0] : '',
     bas_acceptanceCause: caseData.cause_of_acceptance || '',
+    pastSurgeries: pastSurgeriesList,
     research: typeof caseData.research === 'object' && caseData.research !== null ? caseData.research : {},
     createdAt: caseData.created_at,
     updatedAt: caseData.updated_at,
@@ -329,10 +357,11 @@ export function caseFromApi(caseData: BackendCase): Patient {
   };
 
   const p = patient as Record<string, any>;
-  p.basSocAlarmActive = !!(caseData.social_alarm_active ?? caseData.bas_soc_alarm_active);
-  p.basSocAlarmDate = (caseData.social_alarm_date || caseData.bas_soc_alarm_date) ? String(caseData.social_alarm_date || caseData.bas_soc_alarm_date).split('T')[0] : '';
-  p.basSocAlarmNote = caseData.social_alarm_note || caseData.bas_soc_alarm_note || '';
-  p.basSocPriority = caseData.social_alarm_priority || caseData.bas_soc_alarm_priority || 'red';
+  const raw = caseData as any;
+  p.basSocAlarmActive = !!(raw.social_alarm_active ?? raw.bas_soc_alarm_active);
+  p.basSocAlarmDate = (raw.social_alarm_date || raw.bas_soc_alarm_date) ? String(raw.social_alarm_date || raw.bas_soc_alarm_date).split('T')[0] : '';
+  p.basSocAlarmNote = raw.social_alarm_note || raw.bas_soc_alarm_note || '';
+  p.basSocPriority = raw.social_alarm_priority || raw.bas_soc_alarm_priority || 'red';
 
   const programsObj: Record<string, any> = {};
   const dbEnrolledLabels = typeof caseData.programs === 'string'

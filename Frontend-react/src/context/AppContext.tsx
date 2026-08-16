@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { Patient, ResearchTemplate, ClinicalLog } from '../types';
-import { fetchCasesApi, createCaseApi, updateCaseApi, deleteCaseApi, loginApi, logoutApi, getToken } from '../utils/api';
+import { fetchCasesApi, createCaseApi, updateCaseApi, deleteCaseApi, loginApi, logoutApi } from '../utils/api';
 import { isPatientStalled } from '../utils/clinicalRules';
 
 interface AppContextType {
@@ -18,8 +18,10 @@ interface AppContextType {
   clinicalLogs: ClinicalLog[];
   isLoading: boolean;
   isOnline: boolean;
+  isFormDirty: boolean;
   
   // Setters & Switchers
+  setIsFormDirty: (dirty: boolean) => void;
   setCurrentModule: (module: string) => void;
   setEditingPatientId: (id: string | null) => void;
   setCurrentPage: (page: number) => void;
@@ -79,6 +81,58 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [clinicalLogs, setClinicalLogs] = useState<ClinicalLog[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isOnline, setIsOnline] = useState<boolean>(false);
+  const [isFormDirty, setIsFormDirty] = useState<boolean>(false);
+
+  // Global unsaved changes browser tab protection
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isFormDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isFormDirty]);
+
+  // Navigation guard for changing modules (sidebar / links)
+  const handleSetCurrentModule = (module: string) => {
+    if (isFormDirty) {
+      const confirmExit = window.confirm(
+        "You have unsaved changes in this record.\n\nAre you sure you want to leave this page without saving? All unsaved edits will be discarded."
+      );
+      if (!confirmExit) return;
+      setIsFormDirty(false);
+    }
+    // Always close patient editor so the selected dashboard tab opens immediately
+    setEditingPatientId(null);
+    setCurrentModule(module);
+  };
+
+  // Navigation guard for opening/closing patient editor
+  const handleSetEditingPatientId = (id: string | null) => {
+    if (isFormDirty && id !== editingPatientId) {
+      const confirmExit = window.confirm(
+        "You have unsaved changes in this record.\n\nAre you sure you want to leave this patient file without saving? All unsaved edits will be discarded."
+      );
+      if (!confirmExit) return;
+      setIsFormDirty(false);
+    }
+    setEditingPatientId(id);
+  };
+
+  // Navigation guard for logging out
+  const handleLogout = () => {
+    if (isFormDirty) {
+      const confirmExit = window.confirm(
+        "You have unsaved changes in this record.\n\nAre you sure you want to log out without saving? All unsaved edits will be discarded."
+      );
+      if (!confirmExit) return;
+      setIsFormDirty(false);
+    }
+    logout();
+  };
 
   // Load patients from API or fallback to LocalStorage
   const loadPatients = async () => {
@@ -308,9 +362,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         clinicalLogs,
         isLoading,
         isOnline,
+        isFormDirty,
         
-        setCurrentModule,
-        setEditingPatientId,
+        setIsFormDirty,
+        setCurrentModule: handleSetCurrentModule,
+        setEditingPatientId: handleSetEditingPatientId,
         setCurrentPage,
         setFilterStatus,
         setFilterUrgency,
@@ -318,7 +374,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setSearchQuery,
         
         login,
-        logout,
+        logout: handleLogout,
         savePatient,
         archivePatient,
         restorePatient,

@@ -19,8 +19,12 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
-        // Find user by name field
-        $user = User::where('name', $request->username)->first();
+        $loginInput = trim($request->username);
+
+        // Find user by name or email
+        $user = User::where('name', $loginInput)
+                    ->orWhere('email', $loginInput)
+                    ->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             return response()->json([

@@ -18,7 +18,12 @@ import {
   CheckCircle,
   AlertTriangle,
   ShieldCheck,
-  Loader2
+  Loader2,
+  History,
+  Plus,
+  Building2,
+  Stethoscope,
+  FileText
 } from 'lucide-react';
 import { verifyPatientNileApi } from '../../utils/api';
 
@@ -178,26 +183,43 @@ const PROCEDURE_DB: Record<string, (string | { category: string; ops: string[] }
   dent: [
     "Major Dental Procedure", "Moderate Dental Procedure", 
     "Minor Dental Procedure"
+  ],
+  hope: [
+    "Fetal Intervention Evaluation", "Postnatal Surgical Planning", "Prenatal Consultation & Counseling"
+  ],
+  sbif: [
+    "Bladder Augmentation / Mitrofanoff", "Clubfoot Correction", "Meningocele Repair", 
+    "Myelomeningocele Repair", "Tethered Cord Release", "VP Shunt Insertion / Revision"
+  ],
+  livt: [
+    "Deceased Donor Liver Transplant", "Kasai Procedure Revision", "Pediatric Living Donor Liver Transplant", 
+    "Portosystemic Shunt"
+  ],
+  ndev: [
+    "Botox Injection Under GA", "Multidisciplinary Neurodevelopmental Assessment", "SDR Evaluation"
   ]
 };
 
 const getDepartmentProcedures = (deptCode: string): string[] => {
   const data = PROCEDURE_DB[deptCode];
   if (!data) return [];
+  let list: string[] = [];
   if (Array.isArray(data)) {
     if (typeof data[0] === 'string') {
-      return data as string[];
+      list = data as string[];
     } else {
-      return (data as { category: string; ops: string[] }[]).flatMap(c => c.ops);
+      list = (data as { category: string; ops: string[] }[]).flatMap(c => c.ops);
     }
   }
-  return [];
+  return Array.from(new Set(list)).sort((a, b) => a.localeCompare(b));
 };
 
 export const PatientForm: React.FC = () => {
   const { 
     editingPatientId, 
     setEditingPatientId, 
+    setCurrentModule,
+    setIsFormDirty,
     patients, 
     savePatient, 
     archivePatient,
@@ -230,6 +252,15 @@ export const PatientForm: React.FC = () => {
   const [activeAccordion, setActiveAccordion] = useState<string>('demographics');
   const [enrolledClinics, setEnrolledClinics] = useState<{ [code: string]: boolean }>({});
   const [dirty, setDirty] = useState<boolean>(false);
+
+  // Synchronize dirty state with global app context navigation guards
+  useEffect(() => {
+    setIsFormDirty(dirty);
+    return () => {
+      setIsFormDirty(false);
+    };
+  }, [dirty, setIsFormDirty]);
+
   const [showDirtyWarning, setShowDirtyWarning] = useState<boolean>(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
   const [verifyingNile, setVerifyingNile] = useState<boolean>(false);
@@ -237,6 +268,101 @@ export const PatientForm: React.FC = () => {
   const [nileRawResponse, setNileRawResponse] = useState<any>(null);
   const [showNileRaw, setShowNileRaw] = useState<boolean>(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const [showAddPastSurgeryModal, setShowAddPastSurgeryModal] = useState<boolean>(false);
+  const [newPastSurg, setNewPastSurg] = useState({
+    opName: '',
+    completedDate: getLocalDateString(),
+    departmentName: '',
+    notes: ''
+  });
+
+  const getPatientPastSurgeries = () => {
+    const list: any[] = [];
+    if (Array.isArray(localPatient.pastSurgeries)) {
+      list.push(...localPatient.pastSurgeries);
+    }
+    if (Array.isArray(localPatient.research?.past_surgeries)) {
+      localPatient.research.past_surgeries.forEach((s: any) => {
+        if (!list.some(existing => existing.id === s.id || (existing.opName === s.opName && existing.completedDate === s.completedDate))) {
+          list.push(s);
+        }
+      });
+    }
+    if (Array.isArray(localPatient.programs?.surg?.pastSurgeries)) {
+      localPatient.programs.surg.pastSurgeries.forEach((s: any) => {
+        if (!list.some(existing => existing.id === s.id || (existing.opName === s.opName && existing.completedDate === s.completedDate))) {
+          list.push(s);
+        }
+      });
+    }
+    return list;
+  };
+
+  const handleAddPastSurgery = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPastSurg.opName.trim()) {
+      alert('Please enter the surgery / operation name.');
+      return;
+    }
+
+    const newRecord: any = {
+      id: 'surg_' + Date.now(),
+      opName: newPastSurg.opName.trim(),
+      completedDate: newPastSurg.completedDate || getLocalDateString(),
+      departmentName: newPastSurg.departmentName.trim() || 'General Surgery',
+      notes: newPastSurg.notes.trim() || ''
+    };
+
+    const current = getPatientPastSurgeries();
+    const updated = [newRecord, ...current];
+    setLocalPatient(prev => ({
+      ...prev,
+      pastSurgeries: updated
+    }));
+    setDirty(true);
+    setNewPastSurg({
+      opName: '',
+      completedDate: getLocalDateString(),
+      departmentName: '',
+      notes: ''
+    });
+    setShowAddPastSurgeryModal(false);
+  };
+
+  const handleRemovePastSurgery = (idOrIndex: string | number) => {
+    if (!window.confirm('Are you sure you want to remove this previous surgery record?')) return;
+    const current = getPatientPastSurgeries();
+    const updated = current.filter((s: any, idx: number) => (s.id ? s.id !== idOrIndex : idx !== idOrIndex));
+    setLocalPatient(prev => ({
+      ...prev,
+      pastSurgeries: updated
+    }));
+    setDirty(true);
+  };
+
+  const getAllDepartmentRecords = () => {
+    return DEPARTMENTS.filter(d => d.code !== 'anes' && d.code !== 'surg').map(dept => {
+      const isEnrolled = !!enrolledClinics[dept.code];
+      const prog = (localPatient.programs?.[dept.code] || {}) as Record<string, any>;
+      const pfx = dept.pfx || dept.code;
+      
+      const diagnosis = prog.primary_diagnosis || prog[`${pfx}Diag`] || prog[`${dept.code}Diag`] || '';
+      const firstVisit = prog.first_visit_date || prog[`${pfx}FirstVisit`] || prog.lastVisit || '';
+      const plannedOp = prog.planned_operation || prog.opName || prog[`${pfx}OpName`] || '';
+      const notes = prog.notes || prog[`${pfx}Notes`] || '';
+      const hasData = isEnrolled || !!(diagnosis || firstVisit || plannedOp || notes);
+
+      return {
+        dept,
+        isEnrolled,
+        diagnosis,
+        firstVisit,
+        plannedOp,
+        notes,
+        hasData
+      };
+    }).filter(item => item.hasData);
+  };
 
   const handleVerifyNilePatient = async () => {
     const mobile = localPatient.bas_phone || '';
@@ -382,8 +508,8 @@ export const PatientForm: React.FC = () => {
   useEffect(() => {
     if (!localPatient.programs) return;
 
-    let ops: string[] = [];
-    let dates: string[] = [];
+    const ops: string[] = [];
+    const dates: string[] = [];
     let anyActive = false;
 
     DEPARTMENTS.forEach(d => {
@@ -406,13 +532,17 @@ export const PatientForm: React.FC = () => {
 
     const finalOpStr = ops.join(' + ');
     const finalDateStr = Array.from(new Set(dates.filter(Boolean))).join(' & ');
+    const primaryDate = dates.filter(Boolean)[0] || '';
 
     const currentAnes: Record<string, any> = localPatient.programs.anes || {};
+    const currentSurg: Record<string, any> = localPatient.programs.surg || {};
     const surgEnrolled = !!localPatient.programs.surg?.enrolled;
 
     let shouldUpdate = false;
-    let nextAnesEnrolled = false;
+    let nextAnesEnrolled = currentAnes.enrolled;
     let nextAnesData = { ...currentAnes };
+    let nextSurgEnrolled = surgEnrolled;
+    let nextSurgData = { ...currentSurg };
 
     if (!anyActive) {
       if (!surgEnrolled && currentAnes.enrolled) {
@@ -438,6 +568,7 @@ export const PatientForm: React.FC = () => {
         };
       }
     } else {
+      // Auto-enroll to Anesthesia
       if (!surgEnrolled) {
         const hasEnrolledDiff = !currentAnes.enrolled;
         const hasOpStrDiff = currentAnes.reqOpName !== finalOpStr;
@@ -453,20 +584,38 @@ export const PatientForm: React.FC = () => {
           };
         }
       }
+
+      // Auto-enroll to Surgical List if doctor selected procedure AND scheduled date
+      if (finalOpStr && primaryDate) {
+        const hasSurgEnrolledDiff = !currentSurg.enrolled;
+        const hasSurgOpDiff = currentSurg.opName !== finalOpStr;
+        const hasSurgDateDiff = currentSurg.scheduledDate !== primaryDate;
+        if (hasSurgEnrolledDiff || hasSurgOpDiff || hasSurgDateDiff) {
+          shouldUpdate = true;
+          nextSurgEnrolled = true;
+          nextSurgData = {
+            ...currentSurg,
+            enrolled: true,
+            opName: finalOpStr,
+            scheduledDate: primaryDate
+          };
+        }
+      }
     }
 
     if (shouldUpdate) {
       setEnrolledClinics(prev => {
-        if (prev.anes !== nextAnesEnrolled) {
-          return { ...prev, anes: nextAnesEnrolled };
-        }
-        return prev;
+        const updated = { ...prev };
+        if (prev.anes !== nextAnesEnrolled) updated.anes = nextAnesEnrolled;
+        if (prev.surg !== nextSurgEnrolled) updated.surg = nextSurgEnrolled;
+        return updated;
       });
       setLocalPatient(prev => ({
         ...prev,
         programs: {
           ...prev.programs,
-          anes: nextAnesData
+          anes: nextAnesData,
+          surg: nextSurgData
         }
       }));
     }
@@ -641,6 +790,25 @@ export const PatientForm: React.FC = () => {
         }
       }
 
+      if (deptCode === 'anes' && key === 'assessmentStatus' && val === 'fit') {
+        setLocalPatient(prev => {
+          const prog = prev.programs?.anes || { enrolled: true };
+          return {
+            ...prev,
+            programs: {
+              ...prev.programs,
+              anes: {
+                ...prog,
+                enrolled: true,
+                assessmentStatus: 'fit',
+                assessmentDate: prog.assessmentDate || getLocalDateString()
+              }
+            }
+          };
+        });
+        return;
+      }
+
       setLocalPatient(prev => {
         const prog = prev.programs?.[deptCode] || { enrolled: true };
         return {
@@ -703,14 +871,22 @@ export const PatientForm: React.FC = () => {
     e.preventDefault();
 
     // Collect 100% of current DOM values from form inputs across all departments
-    const updatedPrograms = { ...(localPatient.programs || {}) };
+    const updatedPrograms: Record<string, ProgramData> = { ...((localPatient.programs as Record<string, ProgramData>) || {}) };
     if (formRef.current) {
       DEPARTMENTS.forEach(dept => {
         const block = document.getElementById(`block_${dept.code}`);
-        if (!block) return;
+        if (!block) {
+          // If block is not rendered in DOM (e.g. un-enrolled clinic),
+          // preserve all its existing clinical data and enforce explicit enrolled flag from toggle!
+          updatedPrograms[dept.code] = {
+            ...(updatedPrograms[dept.code] || { enrolled: false }),
+            enrolled: !!enrolledClinics[dept.code]
+          };
+          return;
+        }
 
         const pfx = dept.pfx || dept.code;
-        const currentProg = { ...(updatedPrograms[dept.code] || { enrolled: true }) };
+        const currentProg: ProgramData = { ...(updatedPrograms[dept.code] || { enrolled: false }), enrolled: !!enrolledClinics[dept.code] };
 
         block.querySelectorAll('input, select, textarea').forEach((el: any) => {
           if (!el.id || el.id.startsWith('enr_')) return;
@@ -732,12 +908,38 @@ export const PatientForm: React.FC = () => {
           }
         });
 
-        const hasClinicalData = Object.entries(currentProg).some(([k, v]) => 
-          k !== 'enrolled' && k !== 'status' && v !== undefined && v !== null && v !== ''
-        );
-        currentProg.enrolled = currentProg.enrolled === true || (currentProg.enrolled !== false && hasClinicalData);
+        // Set enrolled strictly based on enrolledClinics toggle!
+        currentProg.enrolled = !!enrolledClinics[dept.code];
         updatedPrograms[dept.code] = currentProg;
       });
+    }
+
+    // Auto-enroll to Surgical List if doctor selected procedure AND scheduled date in any clinic
+    const surgeryOps: string[] = [];
+    const surgeryDates: string[] = [];
+    DEPARTMENTS.forEach(dept => {
+      if (dept.code === 'anes' || dept.code === 'surg') return;
+      const prog = updatedPrograms[dept.code];
+      if (prog && prog.enrolled) {
+        const pfx = dept.pfx || dept.code;
+        const op = prog.opName || '';
+        const dt = prog[`${pfx}OpReqAlarmDate`] || prog.targetDate || '';
+        if (op) surgeryOps.push(op);
+        if (dt) surgeryDates.push(dt);
+      }
+    });
+
+    const finalOpStr = surgeryOps.join(' + ');
+    const finalDateStr = surgeryDates.filter(Boolean)[0] || '';
+
+    if (finalOpStr && finalDateStr) {
+      const surg = updatedPrograms.surg || { enrolled: false };
+      updatedPrograms.surg = {
+        ...surg,
+        enrolled: true,
+        opName: finalOpStr || surg.opName || '',
+        scheduledDate: finalDateStr || surg.scheduledDate || '',
+      };
     }
 
     const patientToSave: Partial<Patient> = {
@@ -758,102 +960,134 @@ export const PatientForm: React.FC = () => {
     }
   };
 
-  const transferToSurgicalList = () => {
-    const anes: Record<string, any> = localPatient.programs?.anes || {};
-    const assessmentDate = anes.assessmentDate;
-    if (!assessmentDate) {
-      alert("Transfer Blocked: You must enter the 'Preoperative assessment Done Date'. The system requires this date to track the 30-day fitness expiration.");
-      return;
+  const transferToSurgicalList = async () => {
+    // Collect 100% of current DOM values from form inputs across all departments
+    const updatedPrograms: Record<string, ProgramData> = { ...((localPatient.programs as Record<string, ProgramData>) || {}) };
+    if (formRef.current) {
+      DEPARTMENTS.forEach(dept => {
+        const block = document.getElementById(`block_${dept.code}`);
+        if (!block) {
+          updatedPrograms[dept.code] = {
+            ...(updatedPrograms[dept.code] || { enrolled: false }),
+            enrolled: !!enrolledClinics[dept.code]
+          };
+          return;
+        }
+
+        const pfx = dept.pfx || dept.code;
+        const currentProg: ProgramData = { ...(updatedPrograms[dept.code] || { enrolled: false }), enrolled: !!enrolledClinics[dept.code] };
+
+        block.querySelectorAll('input, select, textarea').forEach((el: any) => {
+          if (!el.id || el.id.startsWith('enr_')) return;
+
+          const val = el.type === 'checkbox' ? el.checked : el.value;
+
+          const alarmMatch = el.id.match(/^(\w+)(AlarmActive|AlarmDate|AlarmNote|Priority)$/);
+          if (alarmMatch) {
+            currentProg[el.id] = val;
+            return;
+          }
+
+          let key = el.id;
+          if (key.startsWith(pfx + '_')) key = key.slice(pfx.length + 1);
+          else if (key.startsWith(dept.code + '_')) key = key.slice(dept.code.length + 1);
+
+          if (key) {
+            currentProg[key] = val;
+          }
+        });
+
+        currentProg.enrolled = !!enrolledClinics[dept.code];
+        updatedPrograms[dept.code] = currentProg;
+      });
     }
+
+    const anes: Record<string, any> = updatedPrograms.anes || localPatient.programs?.anes || {};
+    const assessmentDate = anes.assessmentDate || (document.getElementById('anes_assessmentDate') as HTMLInputElement)?.value || getLocalDateString();
     
     if (isFitnessExpired(assessmentDate)) {
       alert(`Transfer Blocked: The assessment date (${assessmentDate}) is 30 or more days old.\n\nThe patient requires a fresh clinical assessment before they can be transferred to the Surgical List.`);
       return;
     }
 
-    if (window.confirm("Patient is FIT. Transfer data to the Surgical List and empty the Anesthesia Clinic?")) {
-      setDirty(true);
-      setLocalPatient(prev => {
-        const programs = { ...prev.programs };
-        
-        let surgConsent = '';
-        if (anes.consentSigned === 'done') surgConsent = 'yes';
-        else if (anes.consentSigned === 'refused') surgConsent = 'no';
+    if (window.confirm("Patient is FIT. Transfer data to the Surgical List and open the Surgical List?")) {
+      let surgConsent = '';
+      if (anes.consentSigned === 'done') surgConsent = 'yes';
+      else if (anes.consentSigned === 'refused') surgConsent = 'no';
 
-        let surgLabs = '';
-        if (anes.labsOk === 'done') surgLabs = 'yes';
-        else if (anes.labsOk === 'abnormal') surgLabs = 'no';
+      let surgLabs = '';
+      if (anes.labsOk === 'done') surgLabs = 'yes';
+      else if (anes.labsOk === 'abnormal') surgLabs = 'no';
 
-        let surgDest = '';
-        if (anes.postDest === 'ward') surgDest = 'ward';
-        else if (anes.postDest === 'picu') surgDest = 'icu';
-        else if (anes.postDest === 'day_case') surgDest = 'day_case';
+      let surgDest = '';
+      if (anes.postDest === 'ward') surgDest = 'ward';
+      else if (anes.postDest === 'picu' || anes.postDest === 'icu') surgDest = 'icu';
+      else if (anes.postDest === 'day_case') surgDest = 'day_case';
 
-        const surg = programs.surg || { enrolled: true };
-        programs.surg = {
-          ...surg,
-          enrolled: true,
-          opName: anes.reqOpName || '',
-          fitDate: assessmentDate,
-          consent: surgConsent,
-          postDest: surgDest,
-          labsOk: surgLabs,
-          scheduledDate: surg.scheduledDate || '',
-          urgency: surg.urgency || 'none'
-        };
+      const surg = updatedPrograms.surg || { enrolled: true };
+      updatedPrograms.surg = {
+        ...surg,
+        enrolled: true,
+        opName: anes.reqOpName || surg.opName || '',
+        fitDate: assessmentDate,
+        consent: surgConsent || surg.consent || '',
+        postDest: surgDest || surg.postDest || '',
+        labsOk: surgLabs || surg.labsOk || '',
+        scheduledDate: surg.scheduledDate || '',
+        urgency: surg.urgency || 'none'
+      };
 
-        programs.anes = {
-          enrolled: false,
-          reqOpName: '',
-          assessmentStatus: 'pending',
-          assessmentDate: '',
-          unfitReason: '',
-          consentSigned: 'pending',
-          postDest: 'pending',
-          labsOk: 'pending',
-          cardiacClear: 'pending',
-          rbcUnits: '', rbcStatus: 'not_needed',
-          ffpUnits: '', ffpStatus: 'not_needed',
-          cryoUnits: '', cryoStatus: 'not_needed',
-          fwbUnits: '', fwbStatus: 'not_needed',
-          pltUnits: '', pltStatus: 'not_needed',
-          overallBloodReady: 'not_needed'
-        };
+      updatedPrograms.anes = {
+        enrolled: false,
+        reqOpName: '',
+        assessmentStatus: 'pending',
+        assessmentDate: '',
+        unfitReason: '',
+        consentSigned: 'pending',
+        postDest: 'pending',
+        labsOk: 'pending',
+        cardiacClear: 'pending',
+        rbcUnits: '', rbcStatus: 'not_needed',
+        ffpUnits: '', ffpStatus: 'not_needed',
+        cryoUnits: '', cryoStatus: 'not_needed',
+        fwbUnits: '', fwbStatus: 'not_needed',
+        pltUnits: '', pltStatus: 'not_needed',
+        overallBloodReady: 'not_needed'
+      };
 
-        setEnrolledClinics(prevClinics => ({
-          ...prevClinics,
-          anes: false,
-          surg: true
-        }));
-
-        DEPARTMENTS.forEach(dept => {
-          if (dept.code === 'anes' || dept.code === 'surg') return;
-          const prog = programs[dept.code];
-          if (prog?.enrolled) {
-            programs[dept.code] = {
-              ...prog,
-              anesFeedback: '✓ FIT FOR OR',
-              approvedDate: assessmentDate,
-              postDest: anes.postDest || 'pending',
-              labsOk: anes.labsOk || 'pending',
-              consent: anes.consentSigned === 'done' ? 'signed' : anes.consentSigned === 'refused' ? 'refused' : 'pending',
-              blood: anes.overallBloodReady || 'pending'
-            };
-          }
-        });
-
-        return {
-          ...prev,
-          programs
-        };
+      DEPARTMENTS.forEach(dept => {
+        if (dept.code === 'anes' || dept.code === 'surg') return;
+        const prog = updatedPrograms[dept.code];
+        if (prog?.enrolled) {
+          updatedPrograms[dept.code] = {
+            ...prog,
+            anesFeedback: '✓ FIT FOR OR',
+            approvedDate: assessmentDate,
+            postDest: anes.postDest || 'pending',
+            labsOk: anes.labsOk || 'pending',
+            consent: anes.consentSigned === 'done' ? 'signed' : anes.consentSigned === 'refused' ? 'refused' : 'pending',
+            blood: anes.overallBloodReady || 'pending'
+          };
+        }
       });
 
-      alert("Patient is FIT and successfully transferred to the Surgical List. Please save the record to apply changes.");
-      setActiveAccordion('surg');
+      const patientToSave: Partial<Patient> = {
+        ...localPatient,
+        programs: updatedPrograms,
+      };
+
+      const res = await savePatient(patientToSave);
+      if (res.success) {
+        setDirty(false);
+        setCurrentModule('surg');
+        setEditingPatientId(null);
+      } else {
+        alert(`Error saving patient record: ${res.error}`);
+      }
     }
   };
 
-  const rejectFromAnesthesia = () => {
+  const rejectFromAnesthesia = async () => {
     const anes: Record<string, any> = localPatient.programs?.anes || {};
     const reason = anes.unfitReason?.trim();
     if (!reason) {
@@ -862,63 +1096,60 @@ export const PatientForm: React.FC = () => {
     }
 
     if (window.confirm("Are you sure you want to reject this patient?\n\nThis will un-enroll them from Anesthesia, cancel the surgeon's Operation Request, and log the rejection to their medical history.")) {
-      setDirty(true);
-      setLocalPatient(prev => {
-        const programs = { ...prev.programs };
-        
-        programs.anes = {
-          enrolled: false,
-          reqOpName: '',
-          assessmentStatus: 'pending',
-          assessmentDate: '',
-          unfitReason: '',
-          consentSigned: 'pending',
-          postDest: 'pending',
-          labsOk: 'pending',
-          cardiacClear: 'pending',
-          rbcUnits: '', rbcStatus: 'not_needed',
-          ffpUnits: '', ffpStatus: 'not_needed',
-          cryoUnits: '', cryoStatus: 'not_needed',
-          fwbUnits: '', fwbStatus: 'not_needed',
-          pltUnits: '', pltStatus: 'not_needed',
-          overallBloodReady: 'not_needed'
-        };
-        
-        setEnrolledClinics(prevClinics => ({
-          ...prevClinics,
-          anes: false
-        }));
+      const updatedPrograms = { ...(localPatient.programs || {}) };
+      
+      updatedPrograms.anes = {
+        enrolled: false,
+        reqOpName: '',
+        assessmentStatus: 'pending',
+        assessmentDate: '',
+        unfitReason: '',
+        consentSigned: 'pending',
+        postDest: 'pending',
+        labsOk: 'pending',
+        cardiacClear: 'pending',
+        rbcUnits: '', rbcStatus: 'not_needed',
+        ffpUnits: '', ffpStatus: 'not_needed',
+        cryoUnits: '', cryoStatus: 'not_needed',
+        fwbUnits: '', fwbStatus: 'not_needed',
+        pltUnits: '', pltStatus: 'not_needed',
+        overallBloodReady: 'not_needed'
+      };
 
-        DEPARTMENTS.forEach(dept => {
-          if (dept.code === 'anes' || dept.code === 'surg') return;
-          const pfx = dept.pfx || dept.code;
-          const prog = programs[dept.code];
-          if (prog?.enrolled) {
-            programs[dept.code] = {
-              ...prog,
-              [`${pfx}OpReqAlarmActive`]: false,
-              [`${pfx}OpReqAlarmDate`]: '',
-              [`${pfx}OpReqAlarmNote`]: '',
-              [`${pfx}OpReqPriority`]: 'red',
-              anesFeedback: '✗ UNFIT: ' + reason,
-              approvedDate: ''
-            };
-          }
-        });
-
-        const todayStr = getLocalDateString();
-        const logEntry = `[${todayStr}] ❌ Rejected by Anesthesia Clinic. Reason: ${reason}`;
-        const newSocial = prev.bas_social ? prev.bas_social + '\n' + logEntry : logEntry;
-
-        return {
-          ...prev,
-          bas_social: newSocial,
-          programs
-        };
+      DEPARTMENTS.forEach(dept => {
+        if (dept.code === 'anes' || dept.code === 'surg') return;
+        const pfx = dept.pfx || dept.code;
+        const prog = updatedPrograms[dept.code];
+        if (prog?.enrolled) {
+          updatedPrograms[dept.code] = {
+            ...prog,
+            [`${pfx}OpReqAlarmActive`]: false,
+            [`${pfx}OpReqAlarmDate`]: '',
+            [`${pfx}OpReqAlarmNote`]: '',
+            [`${pfx}OpReqPriority`]: 'red',
+            anesFeedback: '✗ UNFIT: ' + reason,
+            approvedDate: ''
+          };
+        }
       });
 
-      alert("Patient rejected and returned to the surgical department. Please save the record to apply changes.");
-      setEditingPatientId(null);
+      const todayStr = getLocalDateString();
+      const logEntry = `[${todayStr}] ❌ Rejected by Anesthesia Clinic. Reason: ${reason}`;
+      const newSocial = localPatient.bas_social ? localPatient.bas_social + '\n' + logEntry : logEntry;
+
+      const patientToSave: Partial<Patient> = {
+        ...localPatient,
+        bas_social: newSocial,
+        programs: updatedPrograms
+      };
+
+      const res = await savePatient(patientToSave);
+      if (res.success) {
+        setDirty(false);
+        setEditingPatientId(null);
+      } else {
+        alert(`Error saving patient record: ${res.error}`);
+      }
     }
   };
 
@@ -933,6 +1164,7 @@ export const PatientForm: React.FC = () => {
 
   const confirmBackWithoutSave = () => {
     setDirty(false);
+    setIsFormDirty(false);
     setShowDirtyWarning(false);
     setEditingPatientId(null);
   };
@@ -1107,39 +1339,55 @@ export const PatientForm: React.FC = () => {
                 </div>
               </div>
             </div>
-            {ap.endsWith('OpReq') && (
-              <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px dashed var(--border)' }}>
-                <label style={{ fontWeight: 'bold', color: 'var(--primary)' }}>Planned Surgical / Procedure Name *</label>
-                <input 
-                  type="text" 
-                  id={`${ap.replace('OpReq', '')}_opName`}
-                  placeholder="Select from presets below or type here..."
-                  value={prog.opName || ''}
-                  onChange={() => {}}
-                  required
-                />
-                <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {getDepartmentProcedures(deptCode).map(proc => (
-                    <button 
-                      key={proc}
-                      type="button" 
-                      className="btn-preset" 
-                      onClick={() => appendProcedure(ap.replace('OpReq', ''), proc)}
+            {ap.endsWith('OpReq') && (() => {
+              const procs = getDepartmentProcedures(deptCode);
+              const currentVal = prog.opName || '';
+              const isCustom = currentVal && !procs.includes(currentVal);
+
+              return (
+                <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px dashed var(--border)' }}>
+                  <label style={{ fontWeight: 'bold', color: 'var(--primary)', display: 'block', marginBottom: 8 }}>
+                    Planned Surgical / Procedure Name *
+                  </label>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                    <select 
+                      id={`${ap.replace('OpReq', '')}_opName`}
+                      value={currentVal}
+                      onChange={handleFormChange}
+                      required
+                      style={{ 
+                        flex: 1, 
+                        padding: '10px 14px', 
+                        fontSize: '0.95rem', 
+                        fontWeight: 500,
+                        backgroundColor: '#fff',
+                        borderColor: currentVal ? 'var(--primary)' : 'var(--border-strong)',
+                        borderRadius: 8
+                      }}
                     >
-                      + {proc}
-                    </button>
-                  ))}
-                  <button 
-                    type="button" 
-                    className="btn-preset" 
-                    style={{ background: '#fecaca', border: '1px solid #fca5a5', color: '#b91c1c' }}
-                    onClick={() => clearProcedure(ap.replace('OpReq', ''))}
-                  >
-                    Clear
-                  </button>
+                      <option value="">-- Select Planned Surgical Procedure (A to Z) --</option>
+                      {procs.map(proc => (
+                        <option key={proc} value={proc}>{proc}</option>
+                      ))}
+                      {isCustom && (
+                        <option value={currentVal}>{currentVal} (Custom)</option>
+                      )}
+                    </select>
+                    {currentVal && (
+                      <button 
+                        type="button" 
+                        className="btn btn-secondary btn-sm"
+                        style={{ padding: '9px 14px', background: '#fee2e2', borderColor: '#fca5a5', color: '#b91c1c', borderRadius: 8, whiteSpace: 'nowrap' }}
+                        onClick={() => clearProcedure(ap.replace('OpReq', ''))}
+                        title="Reset Selected Procedure"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
         )}
       </div>
@@ -1149,11 +1397,34 @@ export const PatientForm: React.FC = () => {
   return (
     <div className="container fade-in">
       {/* ── Form Actions Header ── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <button className="btn btn-secondary btn-sm" onClick={handleBack}>
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <button className="btn btn-secondary btn-sm" onClick={handleBack}>
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </button>
+          {localPatient.bas_name && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
+                {localPatient.bas_name}
+              </span>
+              {localPatient.bas_mrn && (
+                <span style={{ 
+                  fontSize: '0.82rem', 
+                  fontWeight: 600,
+                  fontFamily: 'var(--font-mono)', 
+                  padding: '3px 10px', 
+                  background: 'var(--surface-sunken)', 
+                  border: '1px solid var(--border)', 
+                  borderRadius: 6,
+                  color: 'var(--text-secondary)'
+                }}>
+                  MRN: {localPatient.bas_mrn}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
         <div style={{ display: 'flex', gap: 10 }}>
           {!isNew && (
             <button className="btn btn-danger" onClick={handleDelete}>
@@ -1258,7 +1529,7 @@ export const PatientForm: React.FC = () => {
                     <input 
                       type="date" 
                       id="bas_dob" 
-                      required
+                      required 
                       value={localPatient.bas_dob || ''}
                       onChange={handleFormChange}
                     />
@@ -1268,34 +1539,57 @@ export const PatientForm: React.FC = () => {
                     <input 
                       type="text" 
                       id="bas_age" 
-                      readOnly 
-                      value={localPatient.bas_age || 'Unknown'}
+                      disabled 
+                      value={localPatient.bas_age || 'Unknown'} 
+                      style={{ background: 'var(--surface-sunken)', color: 'var(--text-muted)' }}
                     />
                   </div>
                   <div className="form-group">
                     <label>Governorate (Location)</label>
                     <select 
-                      id="bas_gov"
+                      id="bas_gov" 
                       value={localPatient.bas_gov || ''}
                       onChange={handleFormChange}
                     >
                       <option value="">Select Governorate</option>
-                      <option value="Alexandria">Alexandria</option>
                       <option value="Cairo">Cairo</option>
                       <option value="Giza">Giza</option>
+                      <option value="Alexandria">Alexandria</option>
+                      <option value="Dakahlia">Dakahlia</option>
+                      <option value="Red Sea">Red Sea</option>
                       <option value="Beheira">Beheira</option>
-                      <option value="Luxor">Luxor</option>
+                      <option value="Fayoum">Fayoum</option>
+                      <option value="Gharbiya">Gharbiya</option>
+                      <option value="Ismailia">Ismailia</option>
+                      <option value="Menofia">Menofia</option>
+                      <option value="Minya">Minya</option>
+                      <option value="Qaliubiya">Qaliubiya</option>
+                      <option value="New Valley">New Valley</option>
+                      <option value="Suez">Suez</option>
                       <option value="Aswan">Aswan</option>
-                      <option value="Other">Other / International</option>
+                      <option value="Assiut">Assiut</option>
+                      <option value="Beni Suef">Beni Suef</option>
+                      <option value="Port Said">Port Said</option>
+                      <option value="Damietta">Damietta</option>
+                      <option value="Sharkia">Sharkia</option>
+                      <option value="South Sinai">South Sinai</option>
+                      <option value="Kafr Al-Sheikh">Kafr Al-Sheikh</option>
+                      <option value="Matrouh">Matrouh</option>
+                      <option value="Luxor">Luxor</option>
+                      <option value="Qena">Qena</option>
+                      <option value="North Sinai">North Sinai</option>
+                      <option value="Sohag">Sohag</option>
+                      <option value="Outside Egypt">Outside Egypt</option>
                     </select>
                   </div>
                 </div>
 
-                <div className="mb-4 p-4 bg-indigo-50/60 border border-indigo-200 rounded-lg flex flex-col gap-3">
+                {/* ── Nile Alamal Hospital National ID & Verification ── */}
+                <div className="mb-4 p-3.5 bg-gradient-to-r from-slate-50 to-indigo-50/40 rounded-xl border border-indigo-100 flex flex-col gap-3">
                   <div className="flex items-center gap-2">
-                    <ShieldCheck className="w-5 h-5 text-indigo-600 shrink-0" />
+                    <ShieldCheck className="w-4 h-4 text-indigo-600 shrink-0" />
                     <div>
-                      <span className="text-sm font-semibold text-slate-800">Nile Alamal API Patient Verification</span>
+                      <h4 className="text-xs font-semibold text-slate-800">Nile Alamal Hospital Patient ID Verification</h4>
                       <p className="text-xs text-slate-500">Provide the patient's Mobile Phone Number and National ID / SSN below to verify against Nile Alamal hospital API</p>
                     </div>
                   </div>
@@ -1327,8 +1621,8 @@ export const PatientForm: React.FC = () => {
                     <div className="form-group">
                       <label className="text-xs font-medium text-slate-700">Identification Number / SSN *</label>
                       <input 
-                        type="text"
-                        id="bas_ssn"
+                        type="text" 
+                        id="bas_ssn" 
                         placeholder="e.g. 30002020200712"
                         value={localPatient.bas_ssn || localPatient.bas_mrn || ''}
                         onChange={handleFormChange}
@@ -1379,19 +1673,19 @@ export const PatientForm: React.FC = () => {
                   <div className="form-group">
                     <label>Blood Group</label>
                     <select 
-                      id="bas_blood"
+                      id="bas_blood" 
                       value={localPatient.bas_blood || ''}
                       onChange={handleFormChange}
                     >
-                      <option value="">Unknown</option>
+                      <option value="">Select Blood Group</option>
                       <option value="A+">A+</option>
                       <option value="A-">A-</option>
                       <option value="B+">B+</option>
                       <option value="B-">B-</option>
-                      <option value="O+">O+</option>
-                      <option value="O-">O-</option>
                       <option value="AB+">AB+</option>
                       <option value="AB-">AB-</option>
+                      <option value="O+">O+</option>
+                      <option value="O-">O-</option>
                     </select>
                   </div>
                   <div className="form-group">
@@ -1445,15 +1739,6 @@ export const PatientForm: React.FC = () => {
 
                 <div className="form-grid">
                   <div className="form-group">
-                    <label>Medical History Comments</label>
-                    <textarea 
-                      id="bas_history" 
-                      placeholder="Add clinical context, previous surgeries, comorbidities..."
-                      value={localPatient.bas_history || ''}
-                      onChange={handleFormChange}
-                    />
-                  </div>
-                  <div className="form-group">
                     <label>Social Coordinator Notes</label>
                     <textarea 
                       id="bas_social" 
@@ -1462,17 +1747,16 @@ export const PatientForm: React.FC = () => {
                       onChange={handleFormChange}
                     />
                   </div>
-                </div>
-
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label>Acceptance Cause / Referral Reason</label>
-                  <input 
-                    type="text" 
-                    id="bas_acceptanceCause" 
-                    placeholder="e.g. Charity orthopedic program sponsor"
-                    value={localPatient.bas_acceptanceCause || ''}
-                    onChange={handleFormChange}
-                  />
+                  <div className="form-group">
+                    <label>Acceptance Cause / Referral Reason</label>
+                    <input 
+                      type="text" 
+                      id="bas_acceptanceCause" 
+                      placeholder="e.g. Charity orthopedic program sponsor"
+                      value={localPatient.bas_acceptanceCause || ''}
+                      onChange={handleFormChange}
+                    />
+                  </div>
                 </div>
 
                 {/* Social Alarm inside Demographics */}
@@ -1481,6 +1765,267 @@ export const PatientForm: React.FC = () => {
                 </div>
               </div>
             </div>
+
+          {/* ============================================================== */}
+          {/* 2. Comprehensive Medical & Surgical History Panel */}
+          {/* ============================================================== */}
+          <div className={`program-block ${activeAccordion === 'medical_history' ? 'active' : ''}`}>
+            <div 
+              className="program-block-header" 
+              style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff' }}
+              onClick={() => setActiveAccordion(activeAccordion === 'medical_history' ? '' : 'medical_history')}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <History className="w-4 h-4" />
+                <span>2. Medical History & Previous Clinics / Surgeries</span>
+              </span>
+              {activeAccordion === 'medical_history' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </div>
+
+            <div 
+              className="program-block-content"
+              style={{ display: activeAccordion === 'medical_history' ? 'block' : 'none' }}
+            >
+              {/* Part 1: Previous Completed Surgeries History */}
+              <div style={{ marginBottom: 24, padding: 16, background: '#ffffff', borderRadius: 12, border: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Stethoscope className="w-5 h-5 text-sky-600" />
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                        Previous Completed Surgeries Log ({getPatientPastSurgeries().length})
+                      </h4>
+                      <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                        All surgical operations performed on this case across hospital admissions and external centers
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <button
+                    type="button"
+                    onClick={() => setShowAddPastSurgeryModal(!showAddPastSurgeryModal)}
+                    style={{
+                      padding: '6px 12px',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      borderRadius: 8,
+                      border: 'none',
+                      background: showAddPastSurgeryModal ? '#e2e8f0' : 'linear-gradient(135deg, #0284c7, #0369a1)',
+                      color: showAddPastSurgeryModal ? '#334155' : '#ffffff',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6
+                    }}
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>{showAddPastSurgeryModal ? 'Cancel' : 'Add Past Surgery'}</span>
+                  </button>
+                </div>
+
+                {/* Form to add a new previous surgery */}
+                {showAddPastSurgeryModal && (
+                  <div style={{ marginBottom: 16, padding: 14, background: '#f8fafc', borderRadius: 10, border: '1px solid #cbd5e1' }}>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 700, marginBottom: 10, color: '#0f172a' }}>
+                      Log New Previous Surgery Record
+                    </div>
+                    <div className="form-grid three" style={{ marginBottom: 10 }}>
+                      <div className="form-group">
+                        <label>Operation / Procedure Name *</label>
+                        <input 
+                          type="text" 
+                          placeholder="e.g. CDH Repair, VP Shunt, Scoliosis Fusion"
+                          value={newPastSurg.opName}
+                          onChange={(e) => setNewPastSurg({ ...newPastSurg, opName: e.target.value })}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Date Completed *</label>
+                        <input 
+                          type="date" 
+                          value={newPastSurg.completedDate}
+                          onChange={(e) => setNewPastSurg({ ...newPastSurg, completedDate: e.target.value })}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Operating Unit / Department / Hospital</label>
+                        <input 
+                          type="text" 
+                          placeholder="e.g. Spinal Surgery Clinic / Nile Hospital"
+                          value={newPastSurg.departmentName}
+                          onChange={(e) => setNewPastSurg({ ...newPastSurg, departmentName: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 10 }}>
+                      <label>Surgical Notes & Outcome</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. Uneventful recovery, titanium implants placed, post-op stable"
+                        value={newPastSurg.notes}
+                        onChange={(e) => setNewPastSurg({ ...newPastSurg, notes: e.target.value })}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                      <button 
+                        type="button" 
+                        onClick={handleAddPastSurgery}
+                        className="btn btn-primary"
+                        style={{ padding: '6px 14px', fontSize: '0.78rem' }}
+                      >
+                        <Save className="w-3.5 h-3.5" />
+                        Save Past Surgery
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* List of Previous Surgeries */}
+                {getPatientPastSurgeries().length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {getPatientPastSurgeries().map((ps: any, idx: number) => (
+                      <div 
+                        key={ps.id || idx}
+                        style={{
+                          padding: '10px 14px',
+                          borderRadius: 8,
+                          background: '#f0fdf4',
+                          border: '1px solid #bbf7d0',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          flexWrap: 'wrap',
+                          gap: 8
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span>🩺 {ps.opName}</span>
+                            <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: 4, background: '#dcfce7', color: '#15803d', fontWeight: 600 }}>
+                              ✓ Completed
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: 3 }}>
+                            <span style={{ fontWeight: 600, color: '#047857' }}>Date: {ps.completedDate}</span>
+                            {ps.departmentName && <span> • Unit: {ps.departmentName}</span>}
+                            {ps.notes && <span> • {ps.notes}</span>}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePastSurgery(ps.id || idx)}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: '#ef4444',
+                            cursor: 'pointer',
+                            padding: 4,
+                            borderRadius: 4
+                          }}
+                          title="Delete surgery record"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ padding: '14px', textAlign: 'center', background: 'var(--surface-sunken)', borderRadius: 8, color: 'var(--text-muted)', fontSize: '0.78rem' }}>
+                    No prior surgical operations recorded for this case. Click "Add Past Surgery" above to log prior operations.
+                  </div>
+                )}
+              </div>
+
+              {/* Part 2: Department Clinic Assignments & Timeline */}
+              <div style={{ marginBottom: 24, padding: 16, background: '#ffffff', borderRadius: 12, border: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                  <Building2 className="w-5 h-5 text-indigo-600" />
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                      Specialty Department Clinical Records & History
+                    </h4>
+                    <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      Summary of active enrollments, previous department visits, diagnoses, and dates
+                    </p>
+                  </div>
+                </div>
+
+                {getAllDepartmentRecords().length > 0 ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 }}>
+                    {getAllDepartmentRecords().map(({ dept, isEnrolled, diagnosis, firstVisit, plannedOp, notes }) => (
+                      <div 
+                        key={dept.code}
+                        style={{
+                          padding: 12,
+                          borderRadius: 8,
+                          background: isEnrolled ? '#f0fdfa' : '#f8fafc',
+                          border: isEnrolled ? '1px solid #99f6e4' : '1px solid #cbd5e1',
+                          borderLeft: `4px solid ${dept.color}`
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                          <span style={{ fontWeight: 700, fontSize: '0.82rem', color: '#0f172a' }}>{dept.label}</span>
+                          <span style={{ 
+                            fontSize: '0.68rem', 
+                            fontWeight: 700, 
+                            padding: '2px 6px', 
+                            borderRadius: 4, 
+                            background: isEnrolled ? '#ccfbf1' : '#e2e8f0', 
+                            color: isEnrolled ? '#0f766e' : '#475569' 
+                          }}>
+                            {isEnrolled ? '🟢 Currently Active' : '⚪ Previous Clinic Record'}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '0.74rem', color: '#475569', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                          {firstVisit && (
+                            <div><strong>First Visit / Booking Date:</strong> {firstVisit}</div>
+                          )}
+                          {diagnosis && (
+                            <div><strong>Primary Diagnosis:</strong> {diagnosis}</div>
+                          )}
+                          {plannedOp && (
+                            <div><strong>Planned Procedure:</strong> {plannedOp}</div>
+                          )}
+                          {notes && (
+                            <div><strong>Notes:</strong> {notes}</div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ padding: '14px', textAlign: 'center', background: 'var(--surface-sunken)', borderRadius: 8, color: 'var(--text-muted)', fontSize: '0.78rem' }}>
+                    No specialized clinic records recorded yet. Check clinic boxes above to enroll.
+                  </div>
+                )}
+              </div>
+
+              {/* Part 3: General Medical History & Systemic Notes */}
+              <div style={{ padding: 16, background: '#ffffff', borderRadius: 12, border: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                  <FileText className="w-5 h-5 text-teal-600" />
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                      Medical History Notes & Referral Context
+                    </h4>
+                  </div>
+                </div>
+
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label>General Medical History Comments</label>
+                    <textarea 
+                      id="bas_history" 
+                      placeholder="Add clinical context, previous surgeries, comorbidities..."
+                      value={localPatient.bas_history || ''}
+                      onChange={handleFormChange}
+                      rows={3}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
           {/* ============================================================== */}
           {/* 2. Specialized Clinic Accordions (Dynamic HTML insertion) */}
@@ -1511,6 +2056,60 @@ export const PatientForm: React.FC = () => {
                   className="program-block-content"
                   style={{ display: activeAccordion === dept.code ? 'block' : 'none' }}
                 >
+                    {/* Department Enrollment Action Bar */}
+                    <div style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center', 
+                      marginBottom: 20, 
+                      padding: '10px 16px', 
+                      background: 'var(--surface-sunken)', 
+                      borderRadius: 10, 
+                      border: '1px solid var(--border)',
+                      flexWrap: 'wrap',
+                      gap: 10
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-primary)' }}>Status:</span>
+                        {isEnrolled ? (
+                          <span style={{ padding: '3px 10px', borderRadius: 6, background: '#dcfce7', color: '#15803d', fontSize: '0.82rem', fontWeight: 700 }}>
+                            ✓ Enrolled in {dept.label} (Active Roster)
+                          </span>
+                        ) : (
+                          <span style={{ padding: '3px 10px', borderRadius: 6, background: '#f1f5f9', color: '#475569', fontSize: '0.82rem', fontWeight: 700, border: '1px solid #cbd5e1' }}>
+                            Inactive / Not on Active Clinic List
+                          </span>
+                        )}
+                      </div>
+                      {isEnrolled ? (
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          style={{ background: '#fee2e2', borderColor: '#fca5a5', color: '#b91c1c', fontSize: '0.82rem', fontWeight: 600, padding: '6px 12px' }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm(`Remove this patient from ${dept.label}'s active queue?\n\nAll clinical data and notes will remain saved and editable, but the case will no longer appear on ${dept.label}'s active patient roster.`)) {
+                              handleEnrollmentToggle(dept.code, false);
+                            }
+                          }}
+                        >
+                          ✕ Remove from {dept.label} Active Queue
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-sm"
+                          style={{ fontSize: '0.82rem', fontWeight: 600, padding: '6px 12px' }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEnrollmentToggle(dept.code, true);
+                          }}
+                        >
+                          + Add to {dept.label} Active Queue
+                        </button>
+                      )}
+                    </div>
+
                     {/* Custom HTML Form Injected from departmentsData */}
                     {dept.customForm && (
                       <div 

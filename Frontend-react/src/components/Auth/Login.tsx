@@ -44,11 +44,11 @@ export const Login: React.FC = () => {
           }}>
             <img src="/NOH_logo.jpg" alt="NOH Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 12 }} />
           </div>
-          <h2 style={{ color: '#0f172a', fontSize: '22px', fontWeight: 600, letterSpacing: '-0.01em', marginBottom: 4 }}>
-            Hospital Master Hub
+          <h2 style={{ color: '#0f172a', fontSize: '22px', fontWeight: 700, letterSpacing: '-0.01em', marginBottom: 4 }}>
+            PCC
           </h2>
-          <p style={{ color: '#0f766e', fontSize: '13px', fontWeight: 500 }}>
-            Unified Coordinator Portal
+          <p style={{ color: '#0f766e', fontSize: '13px', fontWeight: 600 }}>
+            Patient Coordinator Center
           </p>
         </div>
 

@@ -34,11 +34,12 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ collapsed, setCollapsed }) => {
-  const { currentModule, editingPatientId, setEditingPatientId } = useApp();
+  const { currentModule, editingPatientId, setEditingPatientId, patients } = useApp();
 
   const getModuleTitle = () => {
     if (editingPatientId) {
-      return editingPatientId === 'new' ? 'Register New Patient' : 'Patient Clinical Record';
+      if (editingPatientId === 'new') return 'Register New Patient';
+      return 'Patient Clinical Record';
     }
     if (currentModule === 'hub') {
       return 'Global Patient Directory';

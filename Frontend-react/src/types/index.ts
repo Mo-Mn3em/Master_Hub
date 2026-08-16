@@ -76,17 +76,18 @@ export interface Patient {
   createdAt?: string;
   updatedAt?: string;
   updatedBy?: string;
+  
+  // Past surgical history
+  pastSurgeries?: CompletedSurgery[];
 
   // Department-specific program data (UI state; apiMapper converts to per-clinic DB columns)
   programs?: {
     [deptCode: string]: ProgramData;
   };
 
-  // Custom research study entries
+  // Custom research study entries & unstructured clinical metadata
   research?: {
-    [studyId: string]: {
-      [fieldName: string]: any;
-    };
+    [key: string]: any;
   };
 
   // Inline index signature for dynamic fields accessed by elements
@@ -99,6 +100,17 @@ export interface ProgramData {
   [key: string]: any;
 }
 
+
+export interface CompletedSurgery {
+  id: string;
+  opName: string;
+  completedDate: string;
+  departmentCode?: string;
+  departmentName?: string;
+  surgeon?: string;
+  outcome?: string;
+  notes?: string;
+}
 
 export interface Alarm {
   prefix: string;
