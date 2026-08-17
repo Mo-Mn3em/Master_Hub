@@ -2786,6 +2786,12 @@ export const PatientForm: React.FC = () => {
                           </div>
                         )}
                       </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
           {/* ── Prominent Bottom Save Action Bar ── */}
           <div style={{
             marginTop: 24,
