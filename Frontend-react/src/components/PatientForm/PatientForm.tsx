@@ -1674,7 +1674,7 @@ export const PatientForm: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="form-group">
                       <label className="text-xs font-medium text-slate-700">Mobile Phone Number *</label>
                       <input 
@@ -1686,20 +1686,7 @@ export const PatientForm: React.FC = () => {
                       />
                     </div>
                     <div className="form-group">
-                      <label className="text-xs font-medium text-slate-700">Type of Identification *</label>
-                      <select
-                        id="bas_typeOfId"
-                        value={localPatient.bas_typeOfId || 'SSN'}
-                        onChange={handleFormChange}
-                      >
-                        <option value="SSN">SSN (Social Security / National ID)</option>
-                        <option value="NationalID">National ID</option>
-                        <option value="Passport">Passport</option>
-                        <option value="MRN">MRN (Medical Record Number)</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label className="text-xs font-medium text-slate-700">Identification Number / SSN *</label>
+                      <label className="text-xs font-medium text-slate-700">National ID / Identification Number *</label>
                       <input 
                         type="text" 
                         id="bas_ssn" 
