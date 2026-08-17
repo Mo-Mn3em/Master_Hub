@@ -26,15 +26,17 @@ class NileVerificationController extends Controller
     {
         $validated = $request->validate([
             'mobile'                 => 'required|string',
+            'typeOfIdentification'   => 'nullable|string',
             'TypeOfIdentification'   => 'nullable|string',
             'type_of_identification' => 'nullable|string',
+            'identificationNumber'   => 'nullable|string',
             'IdentificationNumber'   => 'nullable|string',
             'identification_number'   => 'nullable|string',
         ]);
 
         $mobile = $validated['mobile'];
-        $typeOfId = $validated['TypeOfIdentification'] ?? $validated['type_of_identification'] ?? 'SSN';
-        $idNumber = $validated['IdentificationNumber'] ?? $validated['identification_number'] ?? '';
+        $typeOfId = $validated['typeOfIdentification'] ?? $validated['TypeOfIdentification'] ?? $validated['type_of_identification'] ?? 'SSN';
+        $idNumber = $validated['identificationNumber'] ?? $validated['IdentificationNumber'] ?? $validated['identification_number'] ?? '';
 
         try {
             $result = $this->nileService->verifyPatient($mobile, $typeOfId, $idNumber);

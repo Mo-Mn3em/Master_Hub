@@ -380,8 +380,8 @@ export const PatientForm: React.FC = () => {
     try {
       const res = await verifyPatientNileApi({
         mobile: mobile,
-        TypeOfIdentification: typeOfId,
-        IdentificationNumber: ssn,
+        typeOfIdentification: typeOfId,
+        identificationNumber: ssn,
       });
 
       console.log('Nile API verification response:', res);

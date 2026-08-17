@@ -132,7 +132,9 @@ export async function fetchFilteredCasesApi(params: Record<string, string | unde
 // ── Nile Patient Verification API ──────────────────────────────────────────────
 export interface NileVerificationPayload {
   mobile: string;
+  typeOfIdentification?: string;
   TypeOfIdentification?: string;
+  identificationNumber?: string;
   IdentificationNumber?: string;
 }
 

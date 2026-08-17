@@ -73,48 +73,70 @@ class NileApiService
      */
     public function verifyPatient(string $mobile, string $typeOfIdentification, string $identificationNumber): array
     {
-        $token = $this->getToken();
         $url = $this->baseUrl . '/nile/verify-patient';
 
+        // Exact JSON payload matching Swagger UI specification
         $payload = [
-            'Patient' => [
-                'mobile'               => $mobile,
-                'TypeOfIdentification' => $typeOfIdentification,
-                'IdentificationNumber' => $identificationNumber,
-            ]
+            'mobile'               => $mobile,
+            'typeOfIdentification' => $typeOfIdentification,
+            'identificationNumber' => $identificationNumber,
         ];
 
-        $response = Http::withToken($token)
-            ->acceptJson()
-            ->post($url, $payload);
+        // Attempt request with Token if credentials exist, otherwise direct JSON POST
+        try {
+            $req = Http::acceptJson()->asJson()->timeout(10);
 
-        // If 401 Unauthorized, token might be expired; retry once with fresh token
-        if ($response->status() === 401) {
-            $token = $this->getToken(true);
-            $response = Http::withToken($token)
-                ->acceptJson()
-                ->post($url, $payload);
-        }
+            if (!empty($this->username) && !empty($this->password)) {
+                try {
+                    $token = $this->getToken();
+                    $req = $req->withToken($token);
+                } catch (Exception $e) {
+                    Log::warning('Nile API token retrieval skipped or failed: ' . $e->getMessage());
+                }
+            }
 
-        if ($response->failed()) {
-            Log::error('Nile Patient Verification failed', [
+            $response = $req->post($url, $payload);
+
+            // If 401 Unauthorized, retry once if credentials available
+            if ($response->status() === 401 && !empty($this->username)) {
+                $token = $this->getToken(true);
+                $response = Http::withToken($token)->acceptJson()->asJson()->timeout(10)->post($url, $payload);
+            }
+
+            if ($response->failed()) {
+                Log::error('Nile Patient Verification failed', [
+                    'url'     => $url,
+                    'status'  => $response->status(),
+                    'payload' => $payload,
+                    'body'    => $response->body(),
+                ]);
+
+                return [
+                    'success' => false,
+                    'message' => 'Nile API verification returned error status ' . $response->status(),
+                    'status'  => $response->status(),
+                    'data'    => $response->json() ?? $response->body(),
+                ];
+            }
+
+            return [
+                'success' => true,
                 'status'  => $response->status(),
+                'data'    => $response->json() ?? $response->body(),
+            ];
+        } catch (Exception $e) {
+            Log::error('Nile API Exception', [
+                'url'     => $url,
                 'payload' => $payload,
-                'body'    => $response->body(),
+                'error'   => $e->getMessage(),
             ]);
 
             return [
                 'success' => false,
-                'message' => 'Nile API verification request failed.',
-                'status'  => $response->status(),
-                'data'    => $response->json() ?? $response->body(),
+                'message' => 'Network error connecting to Nile API: ' . $e->getMessage(),
+                'status'  => 500,
+                'data'    => null,
             ];
         }
-
-        return [
-            'success' => true,
-            'status'  => $response->status(),
-            'data'    => $response->json(),
-        ];
     }
 }
