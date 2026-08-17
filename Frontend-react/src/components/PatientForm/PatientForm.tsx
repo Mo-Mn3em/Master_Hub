@@ -471,6 +471,9 @@ export const PatientForm: React.FC = () => {
         };
         govVal = govMap[govRaw] || govRaw || '';
 
+        // Blood group mapping if available from API
+        const bloodVal = pData.bloodGroup || pData.bloodType || pData.blood_group || pData.blood || '';
+
         setLocalPatient(prev => ({
           ...prev,
           bas_name: fullName || prev.bas_name,
@@ -479,6 +482,7 @@ export const PatientForm: React.FC = () => {
           bas_gender: genderVal || prev.bas_gender,
           bas_dob: dobVal || prev.bas_dob,
           bas_gov: govVal || prev.bas_gov,
+          bas_blood: bloodVal || prev.bas_blood,
         }));
         setDirty(true);
 
