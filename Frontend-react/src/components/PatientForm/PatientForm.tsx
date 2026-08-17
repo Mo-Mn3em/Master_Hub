@@ -1085,8 +1085,26 @@ export const PatientForm: React.FC = () => {
       }
     }
 
+    // Collect latest demographic values from DOM inputs if available
+    const nameEl = document.getElementById('bas_name') as HTMLInputElement;
+    const mrnEl = document.getElementById('bas_mrn') as HTMLInputElement;
+    const ssnEl = document.getElementById('bas_ssn') as HTMLInputElement;
+    const genderEl = document.getElementById('bas_gender') as HTMLSelectElement;
+    const dobEl = document.getElementById('bas_dob') as HTMLInputElement;
+    const govEl = document.getElementById('bas_gov') as HTMLSelectElement;
+    const bloodEl = document.getElementById('bas_blood') as HTMLSelectElement;
+    const phoneEl = document.getElementById('bas_phone') as HTMLInputElement;
+
     const patientToSave: Partial<Patient> = {
       ...localPatient,
+      bas_name: nameEl?.value?.trim() || localPatient.bas_name || '',
+      bas_mrn: mrnEl?.value?.trim() || localPatient.bas_mrn || '',
+      bas_ssn: ssnEl?.value?.trim() || localPatient.bas_ssn || '',
+      bas_gender: genderEl?.value || localPatient.bas_gender || 'male',
+      bas_dob: dobEl?.value || localPatient.bas_dob || '',
+      bas_gov: govEl?.value || localPatient.bas_gov || '',
+      bas_blood: bloodEl?.value || localPatient.bas_blood || '',
+      bas_phone: phoneEl?.value?.trim() || localPatient.bas_phone || '',
       programs: updatedPrograms,
     };
 

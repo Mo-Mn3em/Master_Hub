@@ -273,7 +273,7 @@ export function patientToApi(patient: Partial<Patient>): BackendCase {
     social_alarm_active: !!p.basSocAlarmActive,
     social_alarm_date: p.basSocAlarmDate || null,
     social_alarm_note: p.basSocAlarmNote || null,
-    social_alarm_priority: p.basSocPriority || null,
+    social_alarm_priority: p.basSocPriority || 'red',
     programs: [],
     research: {
       ...(patient.research || {}),

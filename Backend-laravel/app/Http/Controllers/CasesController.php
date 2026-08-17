@@ -263,6 +263,23 @@ class CasesController extends Controller
         ]);
 
         $data = $validator->validate();
+        
+        // Normalize gender
+        if (!empty($data['gender'])) {
+            $g = strtolower((string)$data['gender']);
+            $data['gender'] = ($g === 'f' || str_contains($g, 'female')) ? 'female' : 'male';
+        } else {
+            $data['gender'] = 'male';
+        }
+
+        // Default social alarm priority
+        if (empty($data['social_alarm_priority'])) {
+            $data['social_alarm_priority'] = 'red';
+        }
+        if (!isset($data['social_alarm_active'])) {
+            $data['social_alarm_active'] = false;
+        }
+
         if (isset($data['programs']) && is_array($data['programs'])) {
             $data['programs'] = implode("\n", array_filter($data['programs']));
         }
