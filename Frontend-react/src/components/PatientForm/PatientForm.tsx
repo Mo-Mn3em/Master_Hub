@@ -1774,18 +1774,43 @@ export const PatientForm: React.FC = () => {
                 </div>
 
                 {/* ── Nile Alamal Hospital National ID & Verification ── */}
-                <div className="mb-4 p-3.5 bg-gradient-to-r from-slate-50 to-indigo-50/40 rounded-xl border border-indigo-100 flex flex-col gap-3">
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-indigo-600 shrink-0" />
+                <div style={{
+                  margin: '20px 0',
+                  padding: '20px 22px',
+                  background: 'rgba(15, 118, 110, 0.04)',
+                  border: '1px solid rgba(15, 118, 110, 0.22)',
+                  borderRadius: 'var(--radius-lg, 16px)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 16
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 10,
+                      background: 'var(--accent, #0f766e)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#ffffff',
+                      flexShrink: 0
+                    }}>
+                      <ShieldCheck className="w-5 h-5" />
+                    </div>
                     <div>
-                      <h4 className="text-xs font-semibold text-slate-800">Nile Alamal Hospital Patient ID Verification</h4>
-                      <p className="text-xs text-slate-500">Provide the patient's Mobile Phone Number and National ID / SSN below to verify against Nile Alamal hospital API</p>
+                      <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                        Nile Alamal Hospital Patient ID Verification
+                      </h4>
+                      <p style={{ margin: '2px 0 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                        Enter the patient's Mobile Phone and National ID to verify official hospital records and auto-fill demographics.
+                      </p>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="form-group">
-                      <label className="text-xs font-medium text-slate-700">Mobile Phone Number *</label>
+                  <div className="form-grid">
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label>Mobile Phone Number *</label>
                       <input 
                         type="tel"
                         id="bas_phone"
@@ -1794,53 +1819,85 @@ export const PatientForm: React.FC = () => {
                         onChange={handleFormChange}
                       />
                     </div>
-                    <div className="form-group">
-                      <label className="text-xs font-medium text-slate-700">National ID / Identification Number *</label>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label>National ID / Identification Number *</label>
                       <input 
                         type="text" 
                         id="bas_ssn" 
-                        placeholder="e.g. 30002020200712"
+                        placeholder="e.g. 30211118800333"
                         value={localPatient.bas_ssn || localPatient.bas_mrn || ''}
                         onChange={handleFormChange}
                       />
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-indigo-100">
-                    <div className="flex items-center gap-2">
+                  <div style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                    paddingTop: 12,
+                    borderTop: '1px solid rgba(15, 118, 110, 0.12)'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <button
                         type="button"
                         onClick={handleVerifyNilePatient}
                         disabled={verifyingNile}
-                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-semibold rounded-md shadow-sm transition-colors flex items-center gap-1.5"
+                        className="btn btn-primary"
+                        style={{ minWidth: 160 }}
                       >
-                        {verifyingNile ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
-                        {verifyingNile ? 'Verifying with Nile...' : 'Verify Patient'}
+                        {verifyingNile ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                        <span>{verifyingNile ? 'Verifying with Nile...' : 'Verify Patient'}</span>
                       </button>
                       {nileRawResponse && (
                         <button
                           type="button"
                           onClick={() => setShowNileRaw(!showNileRaw)}
-                          className="px-2.5 py-1.5 text-xs font-medium border border-slate-300 hover:bg-slate-100 bg-white rounded text-slate-700"
+                          className="btn btn-secondary btn-sm"
                         >
                           {showNileRaw ? 'Hide API Payload' : 'Show API Payload'}
                         </button>
                       )}
                     </div>
+
                     {nileVerificationStatus && (
-                      <span className={`text-xs px-3 py-1.5 rounded font-medium flex items-center gap-1.5 ${
-                        nileVerificationStatus.success ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'
-                      }`}>
-                        {nileVerificationStatus.success ? <CheckCircle className="w-4 h-4 text-green-600 shrink-0" /> : <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />}
-                        {nileVerificationStatus.message}
-                      </span>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        fontSize: '0.85rem',
+                        fontWeight: 600,
+                        padding: '8px 14px',
+                        borderRadius: 'var(--radius, 10px)',
+                        background: nileVerificationStatus.success ? '#ecfdf5' : '#fef2f2',
+                        color: nileVerificationStatus.success ? '#065f46' : '#991b1b',
+                        border: `1px solid ${nileVerificationStatus.success ? '#a7f3d0' : '#fecaca'}`
+                      }}>
+                        {nileVerificationStatus.success ? (
+                          <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                        ) : (
+                          <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                        )}
+                        <span>{nileVerificationStatus.message}</span>
+                      </div>
                     )}
                   </div>
 
                   {showNileRaw && nileRawResponse && (
-                    <div className="mt-2 p-3 bg-slate-900 text-green-400 font-mono text-xs rounded-md overflow-x-auto max-h-60">
-                      <div className="text-slate-400 text-[10px] mb-1 font-sans">// Nile API Raw Response Payload</div>
-                      <pre>{JSON.stringify(nileRawResponse, null, 2)}</pre>
+                    <div style={{
+                      padding: 14,
+                      background: '#0f172a',
+                      color: '#4ade80',
+                      fontFamily: 'var(--font-mono, monospace)',
+                      fontSize: '0.80rem',
+                      borderRadius: 10,
+                      overflowX: 'auto',
+                      maxHeight: 240
+                    }}>
+                      <div style={{ color: '#94a3b8', fontSize: '0.75rem', marginBottom: 6 }}>// Nile API Raw Response</div>
+                      <pre style={{ margin: 0 }}>{JSON.stringify(nileRawResponse, null, 2)}</pre>
                     </div>
                   )}
                 </div>
