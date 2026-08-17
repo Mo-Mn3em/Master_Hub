@@ -376,7 +376,7 @@ export const AnesthesiaList: React.FC = () => {
                     ) : savedFeedback[patient.id] ? (
                       <>
                         <ShieldCheck className="w-4 h-4" />
-                        <span>✓ Saved in Database</span>
+                        <span>Saved in Database</span>
                       </>
                     ) : (
                       <>

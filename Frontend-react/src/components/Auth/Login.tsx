@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { LogIn, Lock, User } from 'lucide-react';
+import { LogIn, Lock, User, AlertCircle } from 'lucide-react';
 
 export const Login: React.FC = () => {
   const { login } = useApp();
@@ -92,8 +92,9 @@ export const Login: React.FC = () => {
           </div>
 
           {error && (
-            <div style={{ color: '#dc2626', fontSize: '12px', marginBottom: 16, textAlign: 'left', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '10px 14px', fontWeight: 500 }}>
-              ⚠️ {error}
+            <div style={{ color: '#dc2626', fontSize: '12px', marginBottom: 16, textAlign: 'left', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '10px 14px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+              <span>{error}</span>
             </div>
           )}
 

@@ -16,7 +16,8 @@ import {
   CalendarCheck,
   RotateCcw,
   Filter,
-  BellOff
+  BellOff,
+  Calendar
 } from 'lucide-react';
 import { 
   getDynamicAge, 
@@ -349,11 +350,11 @@ export const GlobalDirectory: React.FC = () => {
           >
             <option value="all">All Cases</option>
             <option value="alarms">Active Alarms (All Priorities)</option>
-            <option value="red">🔴 Urgent Priority (Red Only)</option>
-            <option value="yellow">🟡 Important Priority (Yellow Only)</option>
-            <option value="blue">🔵 Routine Priority (Blue Only)</option>
-            <option value="stalled">⏳ Stalled Cases Only</option>
-            <option value="vip">👑 VIP / Complex Flags</option>
+            <option value="red">Urgent Priority (Red Only)</option>
+            <option value="yellow">Important Priority (Yellow Only)</option>
+            <option value="blue">Routine Priority (Blue Only)</option>
+            <option value="stalled">Stalled Cases Only</option>
+            <option value="vip">VIP / Complex Flags</option>
           </select>
         </div>
 
@@ -522,8 +523,9 @@ export const GlobalDirectory: React.FC = () => {
                     gap: 6
                   }} onClick={(e) => e.stopPropagation()}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
-                      <span style={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 800, color: '#475569', letterSpacing: '0.04em' }}>
-                        ⚠️ Active Alarms ({alarms.length})
+                      <span style={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 800, color: '#475569', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />
+                        <span>Active Alarms ({alarms.length})</span>
                       </span>
                       {/* Multi-priority color dots */}
                       <div style={{ display: 'flex', gap: 4 }}>
@@ -579,8 +581,9 @@ export const GlobalDirectory: React.FC = () => {
                               </span>
                             )}
                             {alarm.date && (
-                              <span style={{ fontSize: '10px', color: '#64748b', marginLeft: 'auto', fontWeight: 500 }}>
-                                📅 {alarm.date}
+                              <span style={{ fontSize: '10px', color: '#64748b', marginLeft: 'auto', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 3 }}>
+                                <Calendar className="w-3 h-3 text-slate-400 shrink-0" />
+                                <span>{alarm.date}</span>
                               </span>
                             )}
                           </div>

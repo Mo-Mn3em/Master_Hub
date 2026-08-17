@@ -399,7 +399,7 @@ export const SurgicalList: React.FC = () => {
     if (anes.assessmentStatus === 'fit' || dbStatus === 'anesthesia_fit_ready' || dbStatus === 'anesthesia_fit_checks_pending') {
       if (blockers.length > 0 || dbStatus === 'anesthesia_fit_checks_pending') {
         return {
-          label: `⚠️ Anesthesia Fit (${blockers.length} Check${blockers.length > 1 ? 's' : ''} Pending)`,
+          label: `Anesthesia Fit (${blockers.length} Check${blockers.length > 1 ? 's' : ''} Pending)`,
           short: 'CHECKS PENDING',
           color: '#c2410c',
           bg: '#ffedd5',
@@ -409,7 +409,7 @@ export const SurgicalList: React.FC = () => {
         };
       }
       return {
-        label: '✓ Anesthesia Confirmed — Fit for OR',
+        label: 'Anesthesia Confirmed — Fit for OR',
         short: 'FIT FOR OR',
         color: '#15803d',
         bg: '#dcfce7',
@@ -421,7 +421,7 @@ export const SurgicalList: React.FC = () => {
 
     // Default: 1. Waiting for confirm from Anesthesia Clinic
     return {
-      label: '⏳ Awaiting Confirmation from Anesthesia Clinic',
+      label: 'Awaiting Confirmation from Anesthesia Clinic',
       short: 'AWAITING ANESTHESIA',
       color: '#7e22ce',
       bg: '#f3e8ff',
@@ -724,7 +724,7 @@ export const SurgicalList: React.FC = () => {
                                 <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
                                   {pastSurgeries.map((ps, idx) => (
                                     <div key={ps.id || idx} style={{ fontSize: '0.72rem', color: '#1e293b' }}>
-                                      ✓ <strong>{ps.opName}</strong> — <span style={{ color: '#047857', fontWeight: 600 }}>{ps.completedDate}</span> {ps.departmentName ? `(${ps.departmentName})` : ''}
+                                      <strong>{ps.opName}</strong> — <span style={{ color: '#047857', fontWeight: 600 }}>{ps.completedDate}</span> {ps.departmentName ? `(${ps.departmentName})` : ''}
                                     </div>
                                   ))}
                                 </div>
@@ -794,7 +794,7 @@ export const SurgicalList: React.FC = () => {
                               ) : savedFeedback[patient.id] ? (
                                 <>
                                   <Check className="w-3 h-3 text-green-600" />
-                                  <span>✓ Saved in DB</span>
+                                  <span>Saved in DB</span>
                                 </>
                               ) : (
                                 <>
@@ -843,7 +843,7 @@ export const SurgicalList: React.FC = () => {
                                 border: '1px solid #86efac',
                                 textAlign: 'center' 
                               }}>
-                                ✓ Done ({surg.completedDate || 'Recorded'})
+                                Done ({surg.completedDate || 'Recorded'})
                               </span>
                             )}
                           </div>
@@ -1059,7 +1059,7 @@ export const SurgicalList: React.FC = () => {
                                 <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
                                   {pastSurgeries.map((ps, idx) => (
                                     <div key={ps.id || idx} style={{ fontSize: '0.72rem', color: '#1e293b' }}>
-                                      ✓ <strong>{ps.opName}</strong> — <span style={{ color: '#047857', fontWeight: 600 }}>{ps.completedDate}</span> {ps.departmentName ? `(${ps.departmentName})` : ''}
+                                      <strong>{ps.opName}</strong> — <span style={{ color: '#047857', fontWeight: 600 }}>{ps.completedDate}</span> {ps.departmentName ? `(${ps.departmentName})` : ''}
                                     </div>
                                   ))}
                                 </div>
@@ -1129,7 +1129,7 @@ export const SurgicalList: React.FC = () => {
                               ) : savedFeedback[patient.id] ? (
                                 <>
                                   <Check className="w-3 h-3 text-green-600" />
-                                  <span>✓ Saved in DB</span>
+                                  <span>Saved in DB</span>
                                 </>
                               ) : (
                                 <>
@@ -1178,7 +1178,7 @@ export const SurgicalList: React.FC = () => {
                                 border: '1px solid #86efac',
                                 textAlign: 'center' 
                               }}>
-                                ✓ Done ({surg.completedDate || 'Recorded'})
+                                Done ({surg.completedDate || 'Recorded'})
                               </span>
                             )}
                           </div>

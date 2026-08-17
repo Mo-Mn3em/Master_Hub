@@ -1230,7 +1230,7 @@ export const PatientForm: React.FC = () => {
         if (prog?.enrolled) {
           updatedPrograms[dept.code] = {
             ...prog,
-            anesFeedback: '✓ FIT FOR OR',
+            anesFeedback: 'FIT FOR OR',
             approvedDate: assessmentDate,
             postDest: anes.postDest || 'pending',
             labsOk: anes.labsOk || 'pending',
@@ -2133,9 +2133,10 @@ export const PatientForm: React.FC = () => {
                       >
                         <div>
                           <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span>🩺 {ps.opName}</span>
+                            <Stethoscope className="w-3.5 h-3.5 text-sky-600 shrink-0" />
+                            <span>{ps.opName}</span>
                             <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: 4, background: '#dcfce7', color: '#15803d', fontWeight: 600 }}>
-                              ✓ Completed
+                              Completed
                             </span>
                           </div>
                           <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: 3 }}>
@@ -2306,7 +2307,7 @@ export const PatientForm: React.FC = () => {
                         <span style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-primary)' }}>Status:</span>
                         {isEnrolled ? (
                           <span style={{ padding: '3px 10px', borderRadius: 6, background: '#dcfce7', color: '#15803d', fontSize: '0.82rem', fontWeight: 700 }}>
-                            ✓ Enrolled in {dept.label} (Active Roster)
+                            Enrolled in {dept.label} (Active Roster)
                           </span>
                         ) : (
                           <span style={{ padding: '3px 10px', borderRadius: 6, background: '#f1f5f9', color: '#475569', fontSize: '0.82rem', fontWeight: 700, border: '1px solid #cbd5e1' }}>

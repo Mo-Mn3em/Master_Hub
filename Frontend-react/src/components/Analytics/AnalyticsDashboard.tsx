@@ -3,7 +3,7 @@ import { useApp } from '../../context/AppContext';
 import DEPARTMENTS from '../../utils/departmentsData';
 import { REPORT_LBL_MAP } from '../../utils/clinicalRules';
 import { exportAnalyticsToExcel } from '../../utils/excel';
-import { Calendar, Filter, BarChart3, TrendingUp, Users, Award, Download, ArrowRight } from 'lucide-react';
+import { Calendar, Filter, BarChart3, TrendingUp, Users, Award, Download, ArrowRight, AlertTriangle } from 'lucide-react';
 
 const DIAGNOSIS_LABEL_MAP: { [key: string]: string } = {
   // Spine
@@ -779,8 +779,9 @@ export const AnalyticsDashboard: React.FC = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}><span style={{ color: '#2563EB', fontWeight: 700 }}>Elective (Blue)</span><span style={{ fontWeight: 700 }}>{bluePct}% ({metrics.acuity.blue})</span></div>
             
             {metrics.acuityEscalations > 0 && (
-              <div style={{ marginTop: 12, padding: 10, background: '#FEF2F2', borderLeft: '4px solid #DC2626', borderRadius: 4, fontSize: 11, fontWeight: 700, color: '#991B1B' }}>
-                ⚠️ {metrics.acuityEscalations} patient(s) clinically deteriorated (Priority escalated) while waiting.
+              <div style={{ marginTop: 12, padding: 10, background: '#FEF2F2', borderLeft: '4px solid #DC2626', borderRadius: 4, fontSize: 11, fontWeight: 700, color: '#991B1B', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <AlertTriangle className="w-3.5 h-3.5 text-red-600 shrink-0" />
+                <span>{metrics.acuityEscalations} patient(s) clinically deteriorated (Priority escalated) while waiting.</span>
               </div>
             )}
             

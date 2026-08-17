@@ -77,7 +77,7 @@ const DEPARTMENTS = [
                       <input type="text" id="hop_conditionOther" placeholder="Type the exact diagnosis here...">
                   </div>
               </div>`,
-			  customGates: `<div class="gate-item"><label>🦴 Osteotomy Status</label><select id="hop_osteotomy"><option value="not_needed">Not Needed</option><option value="pending">⏳ Required & Pending Ortho Consult</option><option value="notified">✓ Required & Ortho Notified</option></select></div>`
+			  customGates: `<div class="gate-item"><label>Osteotomy Status</label><select id="hop_osteotomy"><option value="not_needed">Not Needed</option><option value="pending">Required & Pending Ortho Consult</option><option value="notified">Required & Ortho Notified</option></select></div>`
 			  },
             { code: 'hi', label: 'Cardiac Congenital', color: '#E74C3C', 
               customForm: `<div class="form-grid three"><div class="form-group"><label>First Clinic Visit</label><input type="date" id="hi_visit"></div><div class="form-group"><label>Primary Diagnosis</label>
