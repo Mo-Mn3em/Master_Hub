@@ -35,7 +35,7 @@ class NileVerificationController extends Controller
         ]);
 
         $mobile = $validated['mobile'];
-        $typeOfId = $validated['typeOfIdentification'] ?? $validated['TypeOfIdentification'] ?? $validated['type_of_identification'] ?? 'SSN';
+        $typeOfId = $validated['typeOfIdentification'] ?? $validated['TypeOfIdentification'] ?? $validated['type_of_identification'] ?? 'NationalID';
         $idNumber = $validated['identificationNumber'] ?? $validated['IdentificationNumber'] ?? $validated['identification_number'] ?? '';
 
         try {

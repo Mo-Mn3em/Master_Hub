@@ -365,12 +365,12 @@ export const PatientForm: React.FC = () => {
   };
 
   const handleVerifyNilePatient = async () => {
-    const mobile = localPatient.bas_phone || '';
-    const ssn = localPatient.bas_ssn || localPatient.bas_mrn || '';
-    const typeOfId = localPatient.bas_typeOfId || 'SSN';
+    const mobile = (localPatient.bas_phone || '').trim();
+    const ssn = (localPatient.bas_ssn || localPatient.bas_mrn || '').trim();
+    const typeOfId = localPatient.bas_typeOfId || 'NationalID';
 
     if (!mobile && !ssn) {
-      alert('Please enter Mobile Phone Number and Identification Number / SSN to verify.');
+      alert('Please enter Mobile Phone Number and National ID / SSN to verify.');
       return;
     }
     setVerifyingNile(true);
@@ -389,7 +389,7 @@ export const PatientForm: React.FC = () => {
 
       if (res.status === 'success') {
         const nileStatus = res.data?.status || res.data?.data?.status || '';
-        const pData = res.data?.patientData || res.data?.patientdata || res.data?.data?.patientData || res.data?.data?.patientdata || {};
+        const pData = res.data?.patientdata || res.data?.patientData || res.data?.data?.patientdata || res.data?.data?.patientData || {};
 
         const isUnverified = nileStatus === 'unVerified' || nileStatus === 'unverified' || (!pData.patientID && !pData.idNumber && !pData.firstNameAr && !pData.firstNameEn);
 
@@ -401,23 +401,81 @@ export const PatientForm: React.FC = () => {
           return;
         }
 
-        // Extract fields from Nile patientData structure
+        // Extract full name (Arabic preferred, fallback English)
         const nameAr = [pData.firstNameAr, pData.secondNameAr, pData.thirdNameAr, pData.fourthNameAr].filter(Boolean).join(' ');
         const nameEn = [pData.firstNameEn, pData.secondNameEn, pData.thirdNameEn, pData.fourthNameEn].filter(Boolean).join(' ');
         const fullName = nameAr || nameEn || pData.fullName || pData.name || '';
 
-        const idNum = pData.idNumber || (pData.patientID ? String(pData.patientID) : '');
+        const mrnVal = pData.patientID ? String(pData.patientID) : '';
+        const ssnVal = pData.idNumber || ssn;
+        
+        // Gender mapping (M -> male, F -> female)
         const genderStr = (pData.gender || '').toString().toLowerCase();
-        const genderVal = genderStr.includes('f') || genderStr.includes('أنثى') ? 'female' :
-                          genderStr.includes('m') || genderStr.includes('ذكر') ? 'male' : '';
-        const dobVal = pData.dateOfBirth ? String(pData.dateOfBirth).split('T')[0] : '';
-        const govVal = pData.address || pData.governorate || pData.nationalityEn || pData.nationalityAr || '';
+        const genderVal = genderStr.startsWith('f') || genderStr.includes('أنثى') ? 'female' :
+                          genderStr.startsWith('m') || genderStr.includes('ذكر') ? 'male' : '';
+
+        // Date of birth parsing (e.g. "11/11/2002 00:00:00" -> "2002-11-11")
+        let dobVal = '';
+        if (pData.dateOfBirth) {
+          const rawDob = String(pData.dateOfBirth).trim();
+          if (rawDob.includes('/')) {
+            const datePart = rawDob.split(' ')[0];
+            const parts = datePart.split('/');
+            if (parts.length === 3) {
+              const p0 = parts[0].padStart(2, '0');
+              const p1 = parts[1].padStart(2, '0');
+              const p2 = parts[2];
+              if (p2.length === 4) {
+                dobVal = `${p2}-${p1}-${p0}`;
+              } else if (p0.length === 4) {
+                dobVal = `${p0}-${p1}-${p2}`;
+              }
+            }
+          } else if (rawDob.includes('-')) {
+            dobVal = rawDob.split('T')[0].split(' ')[0];
+          }
+        }
+
+        // Governorate mapping
+        let govVal = '';
+        const govRaw = pData.address?.governorateAr || pData.address?.governorateEn || pData.governorate || '';
+        const govMap: Record<string, string> = {
+          'الاسكندريه': 'Alexandria',
+          'الأسكندرية': 'Alexandria',
+          'القاهرة': 'Cairo',
+          'الجيزة': 'Giza',
+          'الدقهلية': 'Dakahlia',
+          'البحيرة': 'Beheira',
+          'الغربية': 'Gharbiya',
+          'الشرقية': 'Sharkia',
+          'المنوفية': 'Menofia',
+          'القليوبية': 'Qaliubiya',
+          'كفر الشيخ': 'Kafr Al-Sheikh',
+          'دمياط': 'Damietta',
+          'بورسعيد': 'Port Said',
+          'الإسماعيلية': 'Ismailia',
+          'السويس': 'Suez',
+          'الفيوم': 'Fayoum',
+          'بني سويف': 'Beni Suef',
+          'المنيا': 'Minya',
+          'أسيوط': 'Assiut',
+          'سوهاج': 'Sohag',
+          'قنا': 'Qena',
+          'الأقصر': 'Luxor',
+          'أسوان': 'Aswan',
+          'مطروح': 'Matrouh',
+          'الوادي الجديد': 'New Valley',
+          'البحر الأحمر': 'Red Sea',
+          'شمال سيناء': 'North Sinai',
+          'جنوب سيناء': 'South Sinai',
+        };
+        govVal = govMap[govRaw] || govRaw || '';
 
         setLocalPatient(prev => ({
           ...prev,
           bas_name: fullName || prev.bas_name,
-          bas_mrn: idNum || prev.bas_mrn,
-          bas_ssn: idNum || prev.bas_ssn,
+          bas_mrn: mrnVal || prev.bas_mrn,
+          bas_ssn: ssnVal || prev.bas_ssn,
           bas_gender: genderVal || prev.bas_gender,
           bas_dob: dobVal || prev.bas_dob,
           bas_gov: govVal || prev.bas_gov,
@@ -426,7 +484,7 @@ export const PatientForm: React.FC = () => {
 
         setNileVerificationStatus({
           success: true,
-          message: 'Patient verified successfully in Nile database! Form details auto-filled.',
+          message: `Verified: ${fullName} (MRN: ${mrnVal || ssnVal}) - Data auto-filled!`,
         });
       } else {
         setNileVerificationStatus({
