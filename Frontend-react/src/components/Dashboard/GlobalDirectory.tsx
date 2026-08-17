@@ -15,7 +15,8 @@ import {
   UserCheck,
   CalendarCheck,
   RotateCcw,
-  Filter
+  Filter,
+  BellOff
 } from 'lucide-react';
 import { 
   getDynamicAge, 
@@ -506,7 +507,7 @@ export const GlobalDirectory: React.FC = () => {
                 </div>
 
                 {/* Alarms alerts section inside the card */}
-                {alarms.length > 0 && (
+                {alarms.length > 0 ? (
                   <div style={{
                     marginTop: 'auto',
                     padding: '10px 12px',
@@ -586,6 +587,23 @@ export const GlobalDirectory: React.FC = () => {
                         </div>
                       );
                     })}
+                  </div>
+                ) : (
+                  <div style={{
+                    marginTop: 'auto',
+                    padding: '8px 12px',
+                    borderRadius: '10px',
+                    background: 'rgba(241, 245, 249, 0.5)',
+                    border: '1px dashed #cbd5e1',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 7,
+                    fontSize: '11.5px',
+                    color: '#64748b',
+                    fontWeight: 500
+                  }}>
+                    <BellOff className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span>No active alarms for this case yet</span>
                   </div>
                 )}
 
