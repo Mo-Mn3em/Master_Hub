@@ -75,6 +75,11 @@ class NileApiService
     {
         $url = $this->baseUrl . '/nile/verify-patient';
 
+        // Nile Alamal API requires 'NationalID' for national ID lookups
+        if (empty($typeOfIdentification) || strtoupper($typeOfIdentification) === 'SSN') {
+            $typeOfIdentification = 'NationalID';
+        }
+
         // Exact JSON payload matching Swagger UI specification
         $payload = [
             'mobile'               => $mobile,

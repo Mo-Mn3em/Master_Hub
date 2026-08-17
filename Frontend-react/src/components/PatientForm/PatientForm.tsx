@@ -367,7 +367,7 @@ export const PatientForm: React.FC = () => {
   const handleVerifyNilePatient = async () => {
     const mobile = (localPatient.bas_phone || '').trim();
     const ssn = (localPatient.bas_ssn || localPatient.bas_mrn || '').trim();
-    const typeOfId = localPatient.bas_typeOfId || 'NationalID';
+    const typeOfId = (localPatient.bas_typeOfId && localPatient.bas_typeOfId !== 'SSN') ? localPatient.bas_typeOfId : 'NationalID';
 
     if (!mobile && !ssn) {
       alert('Please enter Mobile Phone Number and National ID / SSN to verify.');
@@ -542,7 +542,7 @@ export const PatientForm: React.FC = () => {
         bas_name: '',
         bas_mrn: '',
         bas_ssn: '',
-        bas_typeOfId: 'SSN',
+        bas_typeOfId: 'NationalID',
         bas_gender: '',
         bas_dob: '',
         bas_age: 'Unknown',
