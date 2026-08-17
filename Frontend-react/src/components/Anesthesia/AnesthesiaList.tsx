@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import type { Patient } from '../../types';
 import DEPARTMENTS from '../../utils/departmentsData';
-import { getLocalDateString } from '../../utils/clinicalRules';
-import { Search, Heart, User, Clipboard, Plus, ShieldCheck, AlertOctagon } from 'lucide-react';
+import { Search, Heart, ShieldCheck, Save } from 'lucide-react';
 
 export const AnesthesiaList: React.FC = () => {
   const { patients, savePatient, setEditingPatientId } = useApp();
@@ -14,13 +13,55 @@ export const AnesthesiaList: React.FC = () => {
   const [bloodFilter, setBloodFilter] = useState('all');
   const [fitnessFilter, setFitnessFilter] = useState('all');
 
-  // Filter patients
+  // Save feedback state
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [savedFeedback, setSavedFeedback] = useState<Record<string, boolean>>({});
+
+  const handleSavePatient = async (patient: Patient) => {
+    setSavingId(patient.id);
+    const res = await savePatient(patient);
+    setSavingId(null);
+    if (res.success) {
+      setSavedFeedback(prev => ({ ...prev, [patient.id]: true }));
+      setTimeout(() => {
+        setSavedFeedback(prev => ({ ...prev, [patient.id]: false }));
+      }, 3000);
+    } else {
+      alert(`Save Error: ${res.error || 'Failed to update database'}`);
+    }
+  };
+
+  // Filter patients needing Pre-Op Fitness Clearance
   const anesPatients = patients.filter(p => {
     if (p.isArchived) return false;
     
-    // Check if enrolled in anesthesia
-    const anes = p.programs?.anes;
-    if (!anes?.enrolled) return false;
+    const anes = (p.programs?.anes || {}) as Record<string, any>;
+    const surg = (p.programs?.surg || {}) as Record<string, any>;
+
+    // Do not show completed surgeries in active pre-op fitness queue
+    if (surg.stage === 'completed') return false;
+
+    // Check if patient requires anesthesia clearance:
+    // 1. Enrolled in Anesthesia Clinic, OR
+    // 2. On Surgical List, OR
+    // 3. Any active clinic has requested surgery / operation
+    let requiresAnes = anes.enrolled && anes.status !== 'discharged';
+    if (!requiresAnes && (surg.enrolled || surg.opName || surg.scheduledDate) && surg.status !== 'discharged') {
+      requiresAnes = true;
+    }
+    if (!requiresAnes) {
+      for (const d of DEPARTMENTS) {
+        if (d.code === 'anes' || d.code === 'surg') continue;
+        const prog = (p.programs?.[d.code] || {}) as Record<string, any>;
+        const pfx = d.pfx || d.code;
+        if (prog.enrolled && (prog[`${pfx}OpReqAlarmActive`] || prog.surgery_booking_active || prog.opName || prog.planned_operation)) {
+          requiresAnes = true;
+          break;
+        }
+      }
+    }
+
+    if (!requiresAnes) return false;
 
     // Search filter (Name or MRN)
     const matchesSearch = 
@@ -153,7 +194,7 @@ export const AnesthesiaList: React.FC = () => {
       {anesPatients.length > 0 ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {anesPatients.map(patient => {
-            const anes = patient.programs?.anes || {};
+            const anes = (patient.programs?.anes || {}) as Record<string, any>;
             const fitStatus = anes.assessmentStatus || 'pending';
             
             let cardColor = 'var(--border)';
@@ -303,6 +344,47 @@ export const AnesthesiaList: React.FC = () => {
                       {(!anes.overallBloodReady || anes.overallBloodReady === 'not_needed') && 'Blood Not Needed'}
                     </span>
                   </div>
+
+                  {/* Explicit Save / Confirm Assessment Button */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSavePatient(patient);
+                    }}
+                    disabled={savingId === patient.id}
+                    style={{
+                      marginTop: 4,
+                      padding: '8px 14px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      borderRadius: 8,
+                      border: 'none',
+                      background: savedFeedback[patient.id] ? '#16a34a' : 'linear-gradient(135deg, #0f766e, #0d9488)',
+                      color: '#ffffff',
+                      cursor: savingId === patient.id ? 'wait' : 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                      boxShadow: '0 2px 6px rgba(13, 148, 136, 0.25)',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    {savingId === patient.id ? (
+                      <span>Saving to DB...</span>
+                    ) : savedFeedback[patient.id] ? (
+                      <>
+                        <ShieldCheck className="w-4 h-4" />
+                        <span>✓ Saved in Database</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        <span>Confirm & Save</span>
+                      </>
+                    )}
+                  </button>
                 </div>
 
               </div>

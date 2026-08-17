@@ -410,7 +410,7 @@ class CasesController extends Controller
         $surgRecord = Dept\DeptSurgicalList::where('case_id', $case->id)->first();
         if ($surgRecord && !empty($surgRecord->operation_name)) {
             $isCompleted = $surgRecord->stage === 'completed';
-            if ($isCompleted) {
+            if ($isCompleted || !$hasSurgeryRequested) {
                 $surgRecord->update(['status' => 'discharged']);
                 if ($surgMaster) {
                     $enrolledDeptIds = array_values(array_diff($enrolledDeptIds, [$surgMaster->id]));
@@ -421,23 +421,29 @@ class CasesController extends Controller
                     $enrolledDeptIds[] = $surgMaster->id;
                 }
             }
+        } elseif ($surgRecord && !$hasSurgeryRequested) {
+            $surgRecord->update(['status' => 'discharged']);
+            if ($surgMaster) {
+                $enrolledDeptIds = array_values(array_diff($enrolledDeptIds, [$surgMaster->id]));
+            }
         }
 
         $isCompletedStage = $surgRecord && $surgRecord->stage === 'completed';
         $isOnSurgicalList = ($surgMaster && in_array($surgMaster->id, $enrolledDeptIds)) || 
-                            ($surgRecord && strtolower((string)$surgRecord->status) === 'enrolled' && !$isCompletedStage);
+                            ($surgRecord && strtolower((string)$surgRecord->status) === 'enrolled' && !$isCompletedStage && $hasSurgeryRequested);
 
         if ($anesMaster) {
-            if ($isOnSurgicalList) {
-                // If patient is on Surgical List, close/discharge Anesthesia
-                $existingAnes = Dept\DeptAnesthesia::where('case_id', $case->id)->first();
+            $existingAnes = Dept\DeptAnesthesia::where('case_id', $case->id)->first();
+            if ($isCompletedStage || !$hasSurgeryRequested) {
+                // If surgery completed or no active clinic requested surgery, discharge Anesthesia
                 if ($existingAnes) {
                     $existingAnes->update(['status' => 'discharged']);
                 }
                 $enrolledDeptIds = array_values(array_diff($enrolledDeptIds, [$anesMaster->id]));
             } else if ($hasSurgeryRequested) {
-                $enrolledDeptIds[] = $anesMaster->id;
-                $existingAnes = Dept\DeptAnesthesia::where('case_id', $case->id)->first();
+                if (!in_array($anesMaster->id, $enrolledDeptIds)) {
+                    $enrolledDeptIds[] = $anesMaster->id;
+                }
                 $finalOpName = !empty($requestedOpName) ? $requestedOpName : ($existingAnes?->requested_operation);
 
                 $updateData = ['status' => 'enrolled'];
@@ -453,7 +459,35 @@ class CasesController extends Controller
             }
         }
 
-        // 4. Sync pure pivot case_department junction table and update programs multiline string
+        // 4. Update surgical_status enum on dept_surgical_list table
+        $surgLatest = Dept\DeptSurgicalList::where('case_id', $case->id)->first();
+        $anesLatest = Dept\DeptAnesthesia::where('case_id', $case->id)->first();
+        if ($surgLatest) {
+            $computedStatus = 'waiting_anesthesia_confirm';
+            $isCompleted = $surgLatest->stage === 'completed' || strtolower((string)$surgLatest->status) === 'discharged';
+
+            if ($isCompleted) {
+                $computedStatus = 'completed';
+            } elseif ($anesLatest && strtolower((string)$anesLatest->assessment_status) === 'unfit') {
+                $computedStatus = 'unfit';
+            } elseif ($anesLatest && strtolower((string)$anesLatest->assessment_status) === 'fit') {
+                $consentDone = strtolower((string)($anesLatest->consent_signed ?? '')) === 'yes' || strtolower((string)($anesLatest->consent_status ?? '')) === 'signed';
+                $bloodReady = strtolower((string)($anesLatest->overall_blood_ready ?? '')) === 'ready' || strtolower((string)($anesLatest->blood_status ?? '')) === 'ready';
+                $cardiacClear = strtolower((string)($anesLatest->cardiac_clear ?? '')) === 'yes';
+
+                if (!$consentDone || !$bloodReady || !$cardiacClear) {
+                    $computedStatus = 'anesthesia_fit_checks_pending';
+                } else {
+                    $computedStatus = 'anesthesia_fit_ready';
+                }
+            } else {
+                $computedStatus = 'waiting_anesthesia_confirm';
+            }
+
+            $surgLatest->update(['surgical_status' => $computedStatus]);
+        }
+
+        // 5. Sync pure pivot case_department junction table and update programs multiline string
         $uniqueEnrolledIds = array_unique($enrolledDeptIds);
         $case->departments()->sync($uniqueEnrolledIds);
 

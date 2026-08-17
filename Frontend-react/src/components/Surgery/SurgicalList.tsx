@@ -3,7 +3,7 @@ import { useApp } from '../../context/AppContext';
 import type { Patient, ProgramData, CompletedSurgery } from '../../types';
 import DEPARTMENTS from '../../utils/departmentsData';
 import { getAutoBlockers, getPatientAlarms, getHighestPriority, getLocalDateString } from '../../utils/clinicalRules';
-import { Search, Calendar, ChevronDown, ChevronUp, AlertCircle, ShieldCheck, CheckCircle2, CheckCheck, Clock, Layers, History } from 'lucide-react';
+import { Search, Calendar, ChevronDown, ChevronUp, AlertCircle, ShieldCheck, CheckCircle2, CheckCheck, Clock, Layers, History, Save, Check } from 'lucide-react';
 
 export const SurgicalList: React.FC = () => {
   const { patients, savePatient, setEditingPatientId } = useApp();
@@ -14,6 +14,24 @@ export const SurgicalList: React.FC = () => {
   const [urgencyFilter, setUrgencyFilter] = useState('all');
   const [statusView, setStatusView] = useState<'scheduled' | 'completed' | 'all'>('scheduled');
   
+  // Save feedback state
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [savedFeedback, setSavedFeedback] = useState<Record<string, boolean>>({});
+
+  const handleSavePatient = async (patient: Patient) => {
+    setSavingId(patient.id);
+    const res = await savePatient(patient);
+    setSavingId(null);
+    if (res.success) {
+      setSavedFeedback(prev => ({ ...prev, [patient.id]: true }));
+      setTimeout(() => {
+        setSavedFeedback(prev => ({ ...prev, [patient.id]: false }));
+      }, 3000);
+    } else {
+      alert(`Save Error: ${res.error || 'Failed to update database'}`);
+    }
+  };
+
   // Track open/collapsed state of date groups
   const [collapsedGroups, setCollapsedGroups] = useState<{ [date: string]: boolean }>({});
 
@@ -88,21 +106,30 @@ export const SurgicalList: React.FC = () => {
   const markSurgeryAsDone = async (patient: Patient) => {
     const surg: ProgramData = patient.programs?.surg || { enrolled: true };
     
-    // Find procedure name from surgery program or specialty clinic
-    let opName = surg.opName || '';
+    // Gather all requested procedures and all referring departments
+    const opsList: string[] = [];
+    const deptLabelsList: string[] = [];
+
+    if (surg.opName) opsList.push(surg.opName);
+
     for (const d of DEPARTMENTS) {
       if (d.code === 'anes' || d.code === 'surg') continue;
       const prog = patient.programs?.[d.code];
       const pfx = d.pfx || d.code;
-      if (prog && (prog.planned_operation || prog.opName || prog[`${pfx}OpName`])) {
-        if (!opName) {
-          opName = prog.planned_operation || prog.opName || prog[`${pfx}OpName`];
+      if (prog && prog.enrolled) {
+        const op = prog.planned_operation || prog.opName || prog[`${pfx}OpName`];
+        if (op && !opsList.includes(op)) {
+          opsList.push(op);
+        }
+        if (!deptLabelsList.includes(d.label)) {
+          deptLabelsList.push(d.label);
         }
       }
     }
-    const completedOp = opName || 'Surgical Operation';
+
+    const completedOp = opsList.join(' + ') || 'Surgical Operation';
     const todayStr = getLocalDateString();
-    const activeDepts = getActiveDepts(patient).map(d => d.label).join(', ');
+    const activeDepts = deptLabelsList.join(', ') || getActiveDepts(patient).map(d => d.label).join(', ');
 
     const newPastSurgery: CompletedSurgery = {
       id: 'surg_' + Date.now(),
@@ -337,74 +364,70 @@ export const SurgicalList: React.FC = () => {
     };
   };
 
-  // Determine overall surgical state / clinical status of the patient
+  // Determine overall surgical state / clinical status of the patient (aligned with DB enum)
   const getSurgicalCaseState = (patient: Patient) => {
     const anes: ProgramData = patient.programs?.anes || { enrolled: false };
     const surg: ProgramData = patient.programs?.surg || { enrolled: false };
     const blockers = getAllPatientBlockers(patient);
 
-    if (surg.stage === 'completed') {
+    const dbStatus = surg.surgical_status;
+
+    if (surg.stage === 'completed' || dbStatus === 'completed') {
       return {
         label: '✅ COMPLETED — Operation Done',
         short: 'DONE',
         color: '#15803d',
         bg: '#dcfce7',
         border: '#86efac',
-        type: 'completed'
+        type: 'completed',
+        enumValue: 'completed'
       };
     }
 
-    if (anes.assessmentStatus === 'fit') {
+    if (anes.assessmentStatus === 'unfit' || dbStatus === 'unfit') {
       return {
-        label: '✓ FIT FOR OR — Anesthesia Cleared',
-        short: 'FIT FOR OR',
-        color: '#15803d',
-        bg: '#dcfce7',
-        border: '#86efac',
-        type: 'fit'
-      };
-    }
-
-    if (anes.assessmentStatus === 'unfit') {
-      return {
-        label: `✕ UNFIT: ${anes.unfitReason || 'Clinical Hold'}`,
+        label: `✕ UNFIT: ${anes.unfitReason || 'Clinical Hold by Anesthesia'}`,
         short: 'UNFIT',
         color: '#991b1b',
         bg: '#fee2e2',
         border: '#fca5a5',
-        type: 'unfit'
+        type: 'unfit',
+        enumValue: 'unfit'
       };
     }
 
-    if (blockers.length > 0) {
+    if (anes.assessmentStatus === 'fit' || dbStatus === 'anesthesia_fit_ready' || dbStatus === 'anesthesia_fit_checks_pending') {
+      if (blockers.length > 0 || dbStatus === 'anesthesia_fit_checks_pending') {
+        return {
+          label: `⚠️ Anesthesia Fit (${blockers.length} Check${blockers.length > 1 ? 's' : ''} Pending)`,
+          short: 'CHECKS PENDING',
+          color: '#c2410c',
+          bg: '#ffedd5',
+          border: '#fdba74',
+          type: 'blocked',
+          enumValue: 'anesthesia_fit_checks_pending'
+        };
+      }
       return {
-        label: `⚠️ BLOCKED (${blockers.length} Gate${blockers.length > 1 ? 's' : ''} Pending)`,
-        short: 'BLOCKED',
-        color: '#c2410c',
-        bg: '#ffedd5',
-        border: '#fdba74',
-        type: 'blocked'
+        label: '✓ Anesthesia Confirmed — Fit for OR',
+        short: 'FIT FOR OR',
+        color: '#15803d',
+        bg: '#dcfce7',
+        border: '#86efac',
+        type: 'fit',
+        enumValue: 'anesthesia_fit_ready'
       };
     }
 
-    if (surg.scheduledDate) {
-      return {
-        label: '📅 SCHEDULED — Awaiting Pre-Op Fitness',
-        short: 'SCHEDULED',
-        color: '#1d4ed8',
-        bg: '#dbeafe',
-        border: '#93c5fd',
-        type: 'scheduled'
-      };
-    }
-
+    // Default: 1. Waiting for confirm from Anesthesia Clinic
     return {
-      label: '⏳ BOOKED — Pending Pre-Op Assessment',
-      short: 'BOOKED',
-      color: '#854d0e',
-      bg: '#fef9c3',
-      border: '#fde047',
-      type: 'pending'
+      label: '⏳ Awaiting Confirmation from Anesthesia Clinic',
+      short: 'AWAITING ANESTHESIA',
+      color: '#7e22ce',
+      bg: '#f3e8ff',
+      border: '#d8b4fe',
+      type: 'awaiting_anes',
+      enumValue: 'waiting_anesthesia_confirm'
     };
   };
 
@@ -741,6 +764,46 @@ export const SurgicalList: React.FC = () => {
                               <option value="postponed">State: Postponed</option>
                             </select>
 
+                            {/* Save Record to DB Button */}
+                            <button
+                              type="button"
+                              onClick={async (e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                await handleSavePatient(patient);
+                              }}
+                              disabled={savingId === patient.id}
+                              style={{
+                                padding: '4px 8px',
+                                fontSize: '0.70rem',
+                                fontWeight: 700,
+                                borderRadius: 6,
+                                border: savedFeedback[patient.id] ? '1px solid #86efac' : '1px solid var(--border)',
+                                background: savedFeedback[patient.id] ? '#dcfce7' : 'var(--surface)',
+                                color: savedFeedback[patient.id] ? '#15803d' : 'var(--text-primary)',
+                                cursor: savingId === patient.id ? 'wait' : 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 4,
+                                transition: 'all 0.2s'
+                              }}
+                            >
+                              {savingId === patient.id ? (
+                                <span>Saving...</span>
+                              ) : savedFeedback[patient.id] ? (
+                                <>
+                                  <Check className="w-3 h-3 text-green-600" />
+                                  <span>✓ Saved in DB</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Save className="w-3 h-3 text-slate-500" />
+                                  <span>Save Record</span>
+                                </>
+                              )}
+                            </button>
+
                             {/* Mark As Done Button */}
                             {!isCompleted ? (
                               <button
@@ -1035,6 +1098,46 @@ export const SurgicalList: React.FC = () => {
                               <option value="completed">State: Completed (Done)</option>
                               <option value="postponed">State: Postponed</option>
                             </select>
+
+                            {/* Save Record to DB Button */}
+                            <button
+                              type="button"
+                              onClick={async (e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                await handleSavePatient(patient);
+                              }}
+                              disabled={savingId === patient.id}
+                              style={{
+                                padding: '4px 8px',
+                                fontSize: '0.70rem',
+                                fontWeight: 700,
+                                borderRadius: 6,
+                                border: savedFeedback[patient.id] ? '1px solid #86efac' : '1px solid var(--border)',
+                                background: savedFeedback[patient.id] ? '#dcfce7' : 'var(--surface)',
+                                color: savedFeedback[patient.id] ? '#15803d' : 'var(--text-primary)',
+                                cursor: savingId === patient.id ? 'wait' : 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 4,
+                                transition: 'all 0.2s'
+                              }}
+                            >
+                              {savingId === patient.id ? (
+                                <span>Saving...</span>
+                              ) : savedFeedback[patient.id] ? (
+                                <>
+                                  <Check className="w-3 h-3 text-green-600" />
+                                  <span>✓ Saved in DB</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Save className="w-3 h-3 text-slate-500" />
+                                  <span>Save Record</span>
+                                </>
+                              )}
+                            </button>
 
                             {/* Mark As Done Button */}
                             {!isCompleted ? (

@@ -849,21 +849,87 @@ export const PatientForm: React.FC = () => {
   // 3. Department Enrollment Toggle
   const handleEnrollmentToggle = (code: string, enrolled: boolean) => {
     setDirty(true);
-    setEnrolledClinics(prev => ({ ...prev, [code]: enrolled }));
+
+    setEnrolledClinics(prev => {
+      const next = { ...prev, [code]: enrolled };
+
+      // When unassigning a department:
+      if (!enrolled) {
+        // Check if any remaining enrolled clinical departments still request surgery or anesthesia
+        let hasRemainingSurgery = false;
+        DEPARTMENTS.forEach(dept => {
+          if (dept.code === 'anes' || dept.code === 'surg' || dept.code === code) return;
+          if (next[dept.code]) {
+            const pfx = dept.pfx || dept.code;
+            const prog = (localPatient.programs?.[dept.code] || {}) as Record<string, any>;
+            if (prog[`${pfx}OpReqAlarmActive`] || prog.surgery_booking_active || prog.opName || prog.planned_operation) {
+              hasRemainingSurgery = true;
+            }
+          }
+        });
+
+        // Close Anesthesia and Surgical List panels if no active clinical department needs surgery
+        if (!hasRemainingSurgery) {
+          next.anes = false;
+          next.surg = false;
+        }
+      }
+
+      return next;
+    });
 
     setLocalPatient(prev => {
-      const prog = prev.programs?.[code] || { enrolled: false };
-      return {
-        ...prev,
-        programs: {
-          ...prev.programs,
-          [code]: {
-            ...prog,
-            enrolled: enrolled
+      const updatedPrograms = { ...(prev.programs || {}) };
+      const prog = (updatedPrograms[code] || { enrolled: false }) as Record<string, any>;
+      const pfx = DEPARTMENTS.find(d => d.code === code)?.pfx || code;
+
+      // Update enrollment and clear alarms on removed department
+      updatedPrograms[code] = {
+        ...prog,
+        enrolled: enrolled,
+        status: enrolled ? 'enrolled' : 'discharged',
+        ...(enrolled ? {} : {
+          [`${pfx}OpReqAlarmActive`]: false,
+          [`${pfx}OpReqAlarmDate`]: null,
+          surgery_booking_active: false,
+          surgery_booking_date: null
+        })
+      };
+
+      // When unassigning: check if any remaining enrolled clinic needs surgery
+      if (!enrolled) {
+        let hasRemainingSurgery = false;
+        DEPARTMENTS.forEach(dept => {
+          if (dept.code === 'anes' || dept.code === 'surg' || dept.code === code) return;
+          const otherProg = (updatedPrograms[dept.code] || {}) as Record<string, any>;
+          const otherPfx = dept.pfx || dept.code;
+          if (otherProg.enrolled && (otherProg[`${otherPfx}OpReqAlarmActive`] || otherProg.surgery_booking_active || otherProg.opName || otherProg.planned_operation)) {
+            hasRemainingSurgery = true;
+          }
+        });
+
+        if (!hasRemainingSurgery) {
+          if (updatedPrograms.anes) {
+            updatedPrograms.anes = { ...updatedPrograms.anes, enrolled: false, status: 'discharged' };
+          }
+          if (updatedPrograms.surg) {
+            updatedPrograms.surg = { ...updatedPrograms.surg, enrolled: false, status: 'discharged' };
           }
         }
+      }
+
+      return {
+        ...prev,
+        programs: updatedPrograms
       };
     });
+
+    // If active accordion was Anesthesia or Surgical List and they are now closed, reset active accordion
+    if (!enrolled) {
+      if (activeAccordion === code || activeAccordion === 'anes' || activeAccordion === 'surg') {
+        setActiveAccordion('');
+      }
+    }
   };
 
   // 4. Save Submission
@@ -914,7 +980,7 @@ export const PatientForm: React.FC = () => {
       });
     }
 
-    // Auto-enroll to Surgical List if doctor selected procedure AND scheduled date in any clinic
+    // Auto-enroll to Surgical List if doctor selected procedure AND scheduled date in any active clinic
     const surgeryOps: string[] = [];
     const surgeryDates: string[] = [];
     DEPARTMENTS.forEach(dept => {
@@ -922,10 +988,10 @@ export const PatientForm: React.FC = () => {
       const prog = updatedPrograms[dept.code];
       if (prog && prog.enrolled) {
         const pfx = dept.pfx || dept.code;
-        const op = prog.opName || '';
-        const dt = prog[`${pfx}OpReqAlarmDate`] || prog.targetDate || '';
-        if (op) surgeryOps.push(op);
-        if (dt) surgeryDates.push(dt);
+        const op = prog.opName || prog.planned_operation || prog[`${pfx}OpName`] || '';
+        const dt = prog[`${pfx}OpReqAlarmDate`] || prog.surgery_booking_date || prog.targetDate || '';
+        if (op && !surgeryOps.includes(op)) surgeryOps.push(op);
+        if (dt && !surgeryDates.includes(dt)) surgeryDates.push(dt);
       }
     });
 
@@ -940,6 +1006,20 @@ export const PatientForm: React.FC = () => {
         opName: finalOpStr || surg.opName || '',
         scheduledDate: finalDateStr || surg.scheduledDate || '',
       };
+
+      const anes = updatedPrograms.anes || { enrolled: false };
+      updatedPrograms.anes = {
+        ...anes,
+        enrolled: true,
+        reqOpName: finalOpStr || anes.reqOpName || '',
+      };
+    } else if (surgeryOps.length === 0 && !enrolledClinics.surg) {
+      if (updatedPrograms.surg) {
+        updatedPrograms.surg = { ...updatedPrograms.surg, enrolled: false, status: 'discharged' };
+      }
+      if (updatedPrograms.anes && !enrolledClinics.anes) {
+        updatedPrograms.anes = { ...updatedPrograms.anes, enrolled: false, status: 'discharged' };
+      }
     }
 
     const patientToSave: Partial<Patient> = {
