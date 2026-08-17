@@ -101,6 +101,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
           
           <div 
             className={`nav-item ${currentModule === 'hub' ? 'active' : ''}`}
+            style={{ '--nav-accent': '#0d9488' } as React.CSSProperties}
             onClick={() => handleNavClick('hub')}
           >
             <Users className="w-4 h-4 flex-shrink-0" style={{ color: '#0d9488' }} />
@@ -109,6 +110,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
 
           <div 
             className={`nav-item ${currentModule === 'anes' ? 'active' : ''}`}
+            style={{ '--nav-accent': '#8b5cf6' } as React.CSSProperties}
             onClick={() => handleNavClick('anes')}
           >
             <Activity className="w-4 h-4 flex-shrink-0" style={{ color: '#8b5cf6' }} />
@@ -117,6 +119,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
 
           <div 
             className={`nav-item ${currentModule === 'surg' ? 'active' : ''}`}
+            style={{ '--nav-accent': '#10b981' } as React.CSSProperties}
             onClick={() => handleNavClick('surg')}
           >
             <CalendarCheck className="w-4 h-4 flex-shrink-0" style={{ color: '#10b981' }} />
@@ -125,6 +128,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
 
           <div 
             className={`nav-item ${currentModule === 'analytics' ? 'active' : ''}`}
+            style={{ '--nav-accent': '#f59e0b' } as React.CSSProperties}
             onClick={() => handleNavClick('analytics')}
           >
             <PieChart className="w-4 h-4 flex-shrink-0" style={{ color: '#f59e0b' }} />
@@ -133,6 +137,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
 
           <div 
             className={`nav-item ${currentModule === 'research' ? 'active' : ''}`}
+            style={{ '--nav-accent': '#3b82f6' } as React.CSSProperties}
             onClick={() => handleNavClick('research')}
           >
             <Clipboard className="w-4 h-4 flex-shrink-0" style={{ color: '#3b82f6' }} />
@@ -143,13 +148,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
           <div className="nav-section-label">Clinical Programs</div>
           {DEPARTMENTS.filter(d => d.code !== 'anes').map(dept => {
             const isActive = currentModule === dept.code;
+            const itemColor = dept.color || '#0f766e';
             return (
               <div 
                 key={dept.code}
                 className={`nav-item ${isActive ? 'active' : ''}`}
+                style={{ '--nav-accent': itemColor } as React.CSSProperties}
                 onClick={() => handleNavClick(dept.code)}
               >
-                {getDeptIcon(dept.code, dept.color)}
+                {getDeptIcon(dept.code, itemColor)}
                 <span className="truncate">{dept.label}</span>
               </div>
             );

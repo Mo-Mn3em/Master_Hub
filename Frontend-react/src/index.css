@@ -204,18 +204,20 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 13.5px;
   transition: all 0.2s ease;
   position: relative;
+  border-left: 3.5px solid transparent;
 }
 
 .nav-item:hover {
-  background: #f0fdf4;
-  color: #0f766e;
+  background: color-mix(in srgb, var(--nav-accent, #0f766e) 12%, transparent);
+  color: var(--nav-accent, #0f766e);
+  transform: translateX(2px);
 }
 
 .nav-item.active {
-  background: #f0fdf4;
-  color: #0f766e;
+  background: color-mix(in srgb, var(--nav-accent, #0f766e) 15%, transparent);
+  color: var(--nav-accent, #0f766e);
   font-weight: 700;
-  border-left: 3px solid #0f766e;
+  border-left: 3.5px solid var(--nav-accent, #0f766e);
 }
 
 .nav-item-dot {
