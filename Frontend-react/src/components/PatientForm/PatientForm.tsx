@@ -1100,7 +1100,7 @@ export const PatientForm: React.FC = () => {
       bas_name: nameEl?.value?.trim() || localPatient.bas_name || '',
       bas_mrn: mrnEl?.value?.trim() || localPatient.bas_mrn || '',
       bas_ssn: ssnEl?.value?.trim() || localPatient.bas_ssn || '',
-      bas_gender: genderEl?.value || localPatient.bas_gender || 'male',
+      bas_gender: (genderEl?.value || localPatient.bas_gender || 'male') as '' | 'male' | 'female',
       bas_dob: dobEl?.value || localPatient.bas_dob || '',
       bas_gov: govEl?.value || localPatient.bas_gov || '',
       bas_blood: bloodEl?.value || localPatient.bas_blood || '',
