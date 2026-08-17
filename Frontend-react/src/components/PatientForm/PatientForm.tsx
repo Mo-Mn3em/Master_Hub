@@ -263,6 +263,7 @@ export const PatientForm: React.FC = () => {
 
   const [showDirtyWarning, setShowDirtyWarning] = useState<boolean>(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
   const [verifyingNile, setVerifyingNile] = useState<boolean>(false);
   const [nileVerificationStatus, setNileVerificationStatus] = useState<{ success: boolean; message: string } | null>(null);
   const [nileRawResponse, setNileRawResponse] = useState<any>(null);
@@ -1089,16 +1090,24 @@ export const PatientForm: React.FC = () => {
       programs: updatedPrograms,
     };
 
+    setIsSaving(true);
     // Call Context Save
-    const res = await savePatient(patientToSave);
-    if (res.success) {
-      setDirty(false);
-      setEditingPatientId(null);
-      if (res.duplicateRestored) {
-        alert("Found duplicate patient record in Archive. The archived file has been restored and loaded.");
+    try {
+      const res = await savePatient(patientToSave);
+      setIsSaving(false);
+      if (res.success) {
+        setDirty(false);
+        setIsFormDirty(false);
+        setEditingPatientId(null);
+        if (res.duplicateRestored) {
+          alert("Found duplicate patient record in Archive. The archived file has been restored and loaded.");
+        }
+      } else {
+        alert(`Error saving patient record: ${res.error}`);
       }
-    } else {
-      alert(`Error saving patient record: ${res.error}`);
+    } catch (err: any) {
+      setIsSaving(false);
+      alert(`Save Error: ${err.message || 'Failed to save patient'}`);
     }
   };
 
@@ -1569,14 +1578,34 @@ export const PatientForm: React.FC = () => {
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           {!isNew && (
-            <button className="btn btn-danger" onClick={handleDelete}>
+            <button className="btn btn-danger" onClick={handleDelete} disabled={isSaving}>
               <Trash2 className="w-4 h-4" />
               Archive Patient
             </button>
           )}
-          <button className="btn btn-primary" onClick={handleSave}>
-            <Save className="w-4 h-4" />
-            Save Record
+          <button 
+            type="button" 
+            className="btn btn-primary" 
+            onClick={handleSave} 
+            disabled={isSaving}
+            style={{
+              background: 'linear-gradient(135deg, #059669, #10b981)',
+              boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
+              border: 'none',
+              fontWeight: 700
+            }}
+          >
+            {isSaving ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Saving to DB...</span>
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                <span>Save Record</span>
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -2757,11 +2786,62 @@ export const PatientForm: React.FC = () => {
                           </div>
                         )}
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+          {/* ── Prominent Bottom Save Action Bar ── */}
+          <div style={{
+            marginTop: 24,
+            padding: '16px 20px',
+            background: 'white',
+            borderRadius: '16px',
+            border: '1px solid var(--border)',
+            boxShadow: 'var(--shadow-sm)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 12
+          }}>
+            <button 
+              type="button" 
+              className="btn btn-secondary" 
+              onClick={handleBack}
+              disabled={isSaving}
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Cancel & Back</span>
+            </button>
+
+            <button 
+              type="submit" 
+              className="btn btn-primary"
+              disabled={isSaving}
+              style={{
+                padding: '10px 24px',
+                fontSize: '0.90rem',
+                fontWeight: 700,
+                background: 'linear-gradient(135deg, #059669, #10b981)',
+                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+                border: 'none',
+                borderRadius: 8,
+                color: 'white',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                cursor: isSaving ? 'wait' : 'pointer'
+              }}
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Saving to Database...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  <span>Save Record to DB</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </form>
 
