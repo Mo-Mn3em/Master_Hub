@@ -154,6 +154,8 @@ export const GlobalDirectory: React.FC = () => {
             result = result.filter(p => isPatientStalled(p));
           } else if (filterStatus === 'vip') {
             result = result.filter(p => getVIPBadges(p).length > 0);
+          } else if (filterStatus === 'alarms' || filterStatus === 'active_alarms') {
+            result = result.filter(p => getPatientAlarms(p).length > 0);
           } else if (['red', 'yellow', 'blue'].includes(filterStatus)) {
             result = result.filter(p => {
               const alarms = getPatientAlarms(p);
@@ -299,7 +301,7 @@ export const GlobalDirectory: React.FC = () => {
           value={totalAlarmsCount} 
           icon={<AlertTriangle className="w-5 h-5 text-amber-600" />} 
           variant="yellow"
-          onClick={() => { setFilterStatus('red'); setFilterUrgency('all'); setFilterPurpose('all'); }}
+          onClick={() => { setFilterStatus('alarms'); setFilterUrgency('all'); setFilterPurpose('all'); }}
         />
         <StatCard 
           title="VIP / Travelers" 
@@ -346,11 +348,12 @@ export const GlobalDirectory: React.FC = () => {
             onChange={(e) => { setFilterStatus(e.target.value); setCurrentPage(1); }}
           >
             <option value="all">All Cases</option>
-            <option value="stalled">Stalled Cases Only</option>
-            <option value="vip">VIP / Complex Flags</option>
-            <option value="red">Urgent Priority (Red)</option>
-            <option value="yellow">Important Priority (Yellow)</option>
-            <option value="blue">Routine Priority (Blue)</option>
+            <option value="alarms">Active Alarms (All Priorities)</option>
+            <option value="red">🔴 Urgent Priority (Red Only)</option>
+            <option value="yellow">🟡 Important Priority (Yellow Only)</option>
+            <option value="blue">🔵 Routine Priority (Blue Only)</option>
+            <option value="stalled">⏳ Stalled Cases Only</option>
+            <option value="vip">👑 VIP / Complex Flags</option>
           </select>
         </div>
 
