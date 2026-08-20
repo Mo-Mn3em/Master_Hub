@@ -1,5 +1,5 @@
 # =============================================================================
-#  Master Hub — FULL SERVER SETUP SCRIPT
+#  Master Hub -- FULL SERVER SETUP SCRIPT
 #  Run this ONE script on a fresh Windows Server as Administrator.
 #  It installs and configures EVERYTHING:
 #    1. Git
@@ -9,46 +9,52 @@
 #    5. Clones the GitHub repo
 #    6. Creates .env for Laravel
 #    7. Starts all 4 Docker containers
-#    8. Installs the Webhook Windows Service (auto-deploy on git push)
+#    8. Creates IIS site + installs Webhook Windows Service
 #
 #  USAGE (on Windows Server, PowerShell as Administrator):
 #    Set-ExecutionPolicy Bypass -Scope Process -Force
 #    .\FULL_SETUP.ps1
 #
 #  NOTE: The script will reboot the server ONCE (after enabling WSL2).
-#        After reboot, run it again — it will skip completed steps.
+#        After reboot, run it again -- it will skip completed steps.
 # =============================================================================
 
 $REPO_URL    = "https://github.com/Mo-Mn3em/Master_Hub.git"
 $DEPLOY_PATH = "C:\inetpub\master_hub"
-$PROGRESS    = "C:\inetpub\.setup_progress"   # tracks which steps are done
+$PROGRESS    = "C:\inetpub\.setup_progress"
 
-# ── Colour helpers ─────────────────────────────────────────────────────────────
-function Write-Step   { param([string]$T) Write-Host "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkCyan; Write-Host "  $T" -ForegroundColor Cyan }
-function Write-Ok     { param([string]$T) Write-Host "  ✔  $T" -ForegroundColor Green }
-function Write-Warn   { param([string]$T) Write-Host "  ⚠  $T" -ForegroundColor Yellow }
-function Write-Fail   { param([string]$T) Write-Host "  ✘  $T" -ForegroundColor Red; exit 1 }
-function Write-Info   { param([string]$T) Write-Host "  ℹ  $T" -ForegroundColor White }
+# ---- Colour helpers ----------------------------------------------------------
+function Write-Step { param([string]$T)
+    Write-Host ""
+    Write-Host "================================================" -ForegroundColor DarkCyan
+    Write-Host "  $T" -ForegroundColor Cyan
+    Write-Host "================================================" -ForegroundColor DarkCyan
+}
+function Write-Ok   { param([string]$T) Write-Host "  [OK]   $T" -ForegroundColor Green }
+function Write-Warn { param([string]$T) Write-Host "  [WARN] $T" -ForegroundColor Yellow }
+function Write-Fail { param([string]$T) Write-Host "  [FAIL] $T" -ForegroundColor Red; exit 1 }
+function Write-Info { param([string]$T) Write-Host "  [INFO] $T" -ForegroundColor White }
 
-function Is-Done      { param([string]$step) return (Test-Path "$PROGRESS\$step") }
-function Mark-Done    { param([string]$step) New-Item -ItemType File -Path "$PROGRESS\$step" -Force | Out-Null }
+function Is-Done   { param([string]$step) return (Test-Path "$PROGRESS\$step") }
+function Mark-Done { param([string]$step) New-Item -ItemType File -Path "$PROGRESS\$step" -Force | Out-Null }
 
-# ── Must run as Admin ──────────────────────────────────────────────────────────
-$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+# ---- Must run as Admin -------------------------------------------------------
+$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
+    [Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) { Write-Fail "Run PowerShell as Administrator!" }
 
 New-Item -ItemType Directory -Path $PROGRESS -Force | Out-Null
 
 Write-Host ""
-Write-Host "  ╔══════════════════════════════════════════╗" -ForegroundColor Magenta
-Write-Host "  ║     MASTER HUB — FULL SERVER SETUP      ║" -ForegroundColor Magenta
-Write-Host "  ╚══════════════════════════════════════════╝" -ForegroundColor Magenta
+Write-Host "  +------------------------------------------+" -ForegroundColor Magenta
+Write-Host "  |   MASTER HUB -- FULL SERVER SETUP        |" -ForegroundColor Magenta
+Write-Host "  +------------------------------------------+" -ForegroundColor Magenta
 Write-Host ""
 
 # =============================================================================
-# STEP 1 — Install Git
+# STEP 1 -- Install Git
 # =============================================================================
-Write-Step "STEP 1/8 — Installing Git"
+Write-Step "STEP 1/8 -- Installing Git"
 
 if (Is-Done "git") {
     Write-Ok "Git already installed. Skipping."
@@ -59,26 +65,25 @@ if (Is-Done "git") {
     Write-Info "Downloading Git..."
     Invoke-WebRequest -Uri $gitUrl -OutFile $gitInstaller -UseBasicParsing
     Write-Info "Installing Git silently..."
-    Start-Process -FilePath $gitInstaller -ArgumentList "/VERYSILENT /NORESTART /NOCANCEL /SP- /CLOSEAPPLICATIONS /RESTARTAPPLICATIONS /COMPONENTS=icons,ext\reg\shellhere,assoc,assoc_sh" -Wait
+    Start-Process -FilePath $gitInstaller `
+        -ArgumentList "/VERYSILENT /NORESTART /NOCANCEL /SP- /CLOSEAPPLICATIONS /COMPONENTS=icons,ext\reg\shellhere,assoc,assoc_sh" `
+        -Wait
     Remove-Item $gitInstaller -Force -ErrorAction SilentlyContinue
 
-    # Add Git to PATH for this session
     $env:PATH = $env:PATH + ";C:\Program Files\Git\cmd"
-
     $gitVer = & "C:\Program Files\Git\cmd\git.exe" --version 2>&1
     Write-Ok "Git installed: $gitVer"
     Mark-Done "git"
 }
 
-# Ensure Git is in PATH for this session
 if ($env:PATH -notlike "*Git\cmd*") {
     $env:PATH = $env:PATH + ";C:\Program Files\Git\cmd"
 }
 
 # =============================================================================
-# STEP 2 — Enable WSL2 + Containers Windows Features
+# STEP 2 -- Enable WSL2 + Containers Windows Features
 # =============================================================================
-Write-Step "STEP 2/8 — Enabling WSL2 and Containers features"
+Write-Step "STEP 2/8 -- Enabling WSL2 and Containers features"
 
 if (Is-Done "wsl_features") {
     Write-Ok "WSL2 features already enabled. Skipping."
@@ -87,15 +92,15 @@ if (Is-Done "wsl_features") {
     Enable-WindowsOptionalFeature -Online -FeatureName containers -All -NoRestart | Out-Null
 
     Write-Info "Enabling WSL feature..."
-    dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart | Out-Null
+    dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
 
     Write-Info "Enabling Virtual Machine Platform..."
-    dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart | Out-Null
+    dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
 
     Mark-Done "wsl_features"
 
     Write-Warn "Features enabled. THE SERVER MUST REBOOT NOW."
-    Write-Warn "After reboot, run this script again — it will continue from Step 3."
+    Write-Warn "After reboot, run this script again -- it will continue from Step 3."
     Write-Host ""
     Read-Host "Press Enter to reboot now..."
     Restart-Computer -Force
@@ -103,16 +108,17 @@ if (Is-Done "wsl_features") {
 }
 
 # =============================================================================
-# STEP 3 — Install WSL2 Kernel Update + Ubuntu
+# STEP 3 -- Install WSL2 Kernel Update + Ubuntu
 # =============================================================================
-Write-Step "STEP 3/8 — Installing WSL2 Kernel + Ubuntu"
+Write-Step "STEP 3/8 -- Installing WSL2 Kernel + Ubuntu"
 
 if (Is-Done "wsl_kernel") {
     Write-Ok "WSL2 kernel already installed. Skipping."
 } else {
     Write-Info "Downloading WSL2 kernel update..."
     $wslMsi = "$env:TEMP\wsl_update_x64.msi"
-    Invoke-WebRequest -Uri "https://wslstorestorage.blob.core.windows.net/wslblob/wsl_update_x64.msi" -OutFile $wslMsi -UseBasicParsing
+    Invoke-WebRequest -Uri "https://wslstorestorage.blob.core.windows.net/wslblob/wsl_update_x64.msi" `
+        -OutFile $wslMsi -UseBasicParsing
     Start-Process msiexec.exe -ArgumentList "/i `"$wslMsi`" /quiet /norestart" -Wait
     Remove-Item $wslMsi -Force -ErrorAction SilentlyContinue
     Write-Ok "WSL2 kernel update installed."
@@ -128,9 +134,9 @@ if (Is-Done "wsl_kernel") {
 }
 
 # =============================================================================
-# STEP 4 — Install Docker Engine + Docker Compose
+# STEP 4 -- Install Docker Engine + Docker Compose
 # =============================================================================
-Write-Step "STEP 4/8 — Installing Docker Engine + Docker Compose"
+Write-Step "STEP 4/8 -- Installing Docker Engine + Docker Compose"
 
 if (Is-Done "docker") {
     Write-Ok "Docker already installed. Skipping."
@@ -149,13 +155,14 @@ if (Is-Done "docker") {
     $maxTries = 30
     $count = 0
     while ($count -lt $maxTries) {
-        $dockerReady = & docker info 2>&1
+        $null = & docker info 2>&1
         if ($LASTEXITCODE -eq 0) { break }
         $count++
+        Write-Info "Waiting for Docker to start... ($count/$maxTries)"
         Start-Sleep -Seconds 3
     }
 
-    # Configure daemon.json for better settings
+    # Configure daemon.json
     $daemonConfig = '{"experimental":true,"features":{"buildkit":true}}'
     $daemonPath = "C:\ProgramData\Docker\config\daemon.json"
     New-Item -ItemType Directory -Path (Split-Path $daemonPath) -Force | Out-Null
@@ -182,51 +189,53 @@ if (Is-Done "docker") {
 }
 
 # =============================================================================
-# STEP 5 — Install IIS + URL Rewrite + ARR
+# STEP 5 -- Install IIS + URL Rewrite + ARR
 # =============================================================================
-Write-Step "STEP 5/8 — Installing IIS + URL Rewrite + ARR"
+Write-Step "STEP 5/8 -- Installing IIS + URL Rewrite + ARR"
 
 if (Is-Done "iis") {
     Write-Ok "IIS already configured. Skipping."
 } else {
     Write-Info "Installing IIS and required features..."
-    Install-WindowsFeature -Name Web-Server, Web-Mgmt-Tools, Web-Url-Auth, Web-Http-Redirect `
+    Install-WindowsFeature -Name Web-Server, Web-Mgmt-Tools, Web-Http-Redirect `
         -IncludeManagementTools | Out-Null
 
     # Download and install URL Rewrite
     Write-Info "Downloading IIS URL Rewrite module..."
-    $rewriteUrl = "https://download.microsoft.com/download/1/2/8/128E2E22-C1B9-44A4-BE2A-5859ED1D4592/rewrite_amd64_en-US.msi"
     $rewriteMsi = "$env:TEMP\rewrite_amd64.msi"
-    Invoke-WebRequest -Uri $rewriteUrl -OutFile $rewriteMsi -UseBasicParsing
+    Invoke-WebRequest `
+        -Uri "https://download.microsoft.com/download/1/2/8/128E2E22-C1B9-44A4-BE2A-5859ED1D4592/rewrite_amd64_en-US.msi" `
+        -OutFile $rewriteMsi -UseBasicParsing
     Start-Process msiexec.exe -ArgumentList "/i `"$rewriteMsi`" /quiet /norestart" -Wait
     Remove-Item $rewriteMsi -Force -ErrorAction SilentlyContinue
     Write-Ok "URL Rewrite installed."
 
     # Download and install ARR
     Write-Info "Downloading IIS Application Request Routing (ARR)..."
-    $arrUrl = "https://download.microsoft.com/download/E/9/8/E9849D6A-020E-47E4-9FD0-A023E99B54EB/requestRouter_amd64.msi"
     $arrMsi = "$env:TEMP\arr_amd64.msi"
-    Invoke-WebRequest -Uri $arrUrl -OutFile $arrMsi -UseBasicParsing
+    Invoke-WebRequest `
+        -Uri "https://download.microsoft.com/download/E/9/8/E9849D6A-020E-47E4-9FD0-A023E99B54EB/requestRouter_amd64.msi" `
+        -OutFile $arrMsi -UseBasicParsing
     Start-Process msiexec.exe -ArgumentList "/i `"$arrMsi`" /quiet /norestart" -Wait
     Remove-Item $arrMsi -Force -ErrorAction SilentlyContinue
     Write-Ok "ARR installed."
 
-    # Enable ARR proxy via appcmd
+    # Enable ARR proxy
     $appCmd = "$env:SystemRoot\system32\inetsrv\appcmd.exe"
     if (Test-Path $appCmd) {
         & $appCmd set config -section:system.webServer/proxy /enabled:"True" /commit:apphost 2>&1 | Out-Null
         Write-Ok "ARR proxy enabled."
     } else {
-        Write-Warn "appcmd not found. You will need to enable ARR proxy manually in IIS Manager."
+        Write-Warn "appcmd not found. Enable ARR proxy manually in IIS Manager."
     }
 
     Mark-Done "iis"
 }
 
 # =============================================================================
-# STEP 6 — Clone the Repository
+# STEP 6 -- Clone the Repository
 # =============================================================================
-Write-Step "STEP 6/8 — Cloning Master Hub Repository"
+Write-Step "STEP 6/8 -- Cloning Master Hub Repository"
 
 if (Is-Done "clone") {
     Write-Ok "Repository already cloned. Skipping."
@@ -245,40 +254,38 @@ if (Is-Done "clone") {
 }
 
 # =============================================================================
-# STEP 7 — Setup .env + Start Docker Containers
+# STEP 7 -- Setup .env + Start Docker Containers
 # =============================================================================
-Write-Step "STEP 7/8 — Configuring .env and Starting Docker Containers"
+Write-Step "STEP 7/8 -- Configuring .env and Starting Docker Containers"
 
 if (Is-Done "containers") {
     Write-Ok "Containers already started. Skipping initial build."
 } else {
-    # Create .env from example
-    $envPath = "$DEPLOY_PATH\Backend-laravel\.env"
+    $envPath    = "$DEPLOY_PATH\Backend-laravel\.env"
     $envExample = "$DEPLOY_PATH\Backend-laravel\.env.example"
 
     if (-not (Test-Path $envPath)) {
         Copy-Item $envExample $envPath
-        # Force correct DB settings for Docker
-        (Get-Content $envPath) `
-            -replace "DB_CONNECTION=.*", "DB_CONNECTION=mysql" `
-            -replace "#\s*DB_HOST=.*",   "DB_HOST=db" `
-            -replace "#\s*DB_PORT=.*",   "DB_PORT=3306" `
-            -replace "#\s*DB_DATABASE=.*","DB_DATABASE=Master_Hub" `
-            -replace "#\s*DB_USERNAME=.*","DB_USERNAME=root" `
-            -replace "#\s*DB_PASSWORD=.*","DB_PASSWORD=root" |
-            Set-Content $envPath
+        # Set correct DB settings for Docker networking
+        $envContent = Get-Content $envPath
+        $envContent = $envContent -replace "DB_CONNECTION=.*",    "DB_CONNECTION=mysql"
+        $envContent = $envContent -replace "# DB_HOST=.*",        "DB_HOST=db"
+        $envContent = $envContent -replace "# DB_PORT=.*",        "DB_PORT=3306"
+        $envContent = $envContent -replace "# DB_DATABASE=.*",    "DB_DATABASE=Master_Hub"
+        $envContent = $envContent -replace "# DB_USERNAME=.*",    "DB_USERNAME=root"
+        $envContent = $envContent -replace "# DB_PASSWORD=.*",    "DB_PASSWORD=root"
+        $envContent | Set-Content $envPath
         Write-Ok ".env created and configured."
     } else {
         Write-Ok ".env already exists."
     }
 
-    # Build and start containers
     Write-Info "Building and starting all 4 Docker containers..."
     Write-Info "This will take 5-10 minutes on the first run (downloading images)..."
     Set-Location $DEPLOY_PATH
     & docker compose up --build -d
     if ($LASTEXITCODE -ne 0) {
-        Write-Warn "docker compose returned non-zero. Check: docker compose logs"
+        Write-Warn "docker compose returned errors. Run: docker compose logs"
     } else {
         Write-Ok "All containers started."
     }
@@ -286,19 +293,18 @@ if (Is-Done "containers") {
     Mark-Done "containers"
 }
 
-# Show running containers
 Write-Info "Running containers:"
 & docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
 # =============================================================================
-# STEP 8 — Create IIS Site + Install Webhook Service
+# STEP 8 -- Create IIS Site + Install Webhook Service
 # =============================================================================
-Write-Step "STEP 8/8 — Creating IIS Site and Installing Webhook Service"
+Write-Step "STEP 8/8 -- Creating IIS Site and Installing Webhook Service"
 
 if (Is-Done "iis_site") {
     Write-Ok "IIS site already created. Skipping."
 } else {
-    # Create a self-signed SSL certificate
+    # Create self-signed SSL certificate
     Write-Info "Creating self-signed SSL certificate..."
     $cert = New-SelfSignedCertificate `
         -DnsName "master-hub-server", "localhost" `
@@ -308,37 +314,28 @@ if (Is-Done "iis_site") {
     $certThumb = $cert.Thumbprint
     Write-Ok "Certificate created. Thumbprint: $certThumb"
 
-    # Import WebAdministration module
     Import-Module WebAdministration -ErrorAction SilentlyContinue
 
-    # Remove default IIS site if it's using port 80/443
+    # Stop default IIS site to free port 80/443
     $defaultSite = Get-Website -Name "Default Web Site" -ErrorAction SilentlyContinue
     if ($defaultSite) {
         Stop-Website -Name "Default Web Site" -ErrorAction SilentlyContinue
-        Write-Ok "Default Web Site stopped (to free port 80/443)."
+        Write-Ok "Default Web Site stopped (freed ports 80/443)."
     }
 
-    # Create the MasterHub IIS site
+    # Create MasterHub IIS site
     $siteName = "MasterHub"
     $existingSite = Get-Website -Name $siteName -ErrorAction SilentlyContinue
     if (-not $existingSite) {
-        New-Website `
-            -Name $siteName `
-            -PhysicalPath $DEPLOY_PATH `
-            -Port 443 `
-            -Ssl | Out-Null
+        New-Website -Name $siteName -PhysicalPath $DEPLOY_PATH -Port 443 -Ssl | Out-Null
 
-        # Add HTTPS binding with the self-signed cert
         $binding = Get-WebBinding -Name $siteName -Protocol "https"
         if ($binding) {
             $binding.AddSslCertificate($certThumb, "My")
         }
-
-        # Also add HTTP binding (for redirect to HTTPS)
         New-WebBinding -Name $siteName -Protocol "http" -Port 80
-
         Start-Website -Name $siteName
-        Write-Ok "IIS Site '$siteName' created on ports 80 (HTTP) and 443 (HTTPS)."
+        Write-Ok "IIS Site '$siteName' created on ports 80 and 443."
     } else {
         Write-Ok "IIS Site '$siteName' already exists."
     }
@@ -347,11 +344,11 @@ if (Is-Done "iis_site") {
 }
 
 # Install webhook service
-Write-Step "Installing GitHub Webhook Windows Service"
 if (Is-Done "webhook_service") {
     Write-Ok "Webhook service already installed. Skipping."
 } else {
     if (Test-Path "$DEPLOY_PATH\deploy\install_service.ps1") {
+        Write-Info "Installing webhook Windows service..."
         & powershell.exe -ExecutionPolicy Bypass -File "$DEPLOY_PATH\deploy\install_service.ps1"
         Mark-Done "webhook_service"
     } else {
@@ -360,32 +357,35 @@ if (Is-Done "webhook_service") {
 }
 
 # =============================================================================
-# DONE — Print Summary
+# DONE -- Print Summary
 # =============================================================================
+$serverIP = (Get-NetIPAddress -AddressFamily IPv4 |
+    Where-Object { $_.IPAddress -notmatch "^127\." -and $_.IPAddress -notmatch "^169\." } |
+    Select-Object -First 1).IPAddress
+
 Write-Host ""
-Write-Host "  ╔══════════════════════════════════════════════════════════════╗" -ForegroundColor Green
-Write-Host "  ║         ✔  MASTER HUB SERVER SETUP COMPLETE!               ║" -ForegroundColor Green
-Write-Host "  ╚══════════════════════════════════════════════════════════════╝" -ForegroundColor Green
+Write-Host "  +--------------------------------------------------------------+" -ForegroundColor Green
+Write-Host "  |       MASTER HUB SERVER SETUP COMPLETE!                      |" -ForegroundColor Green
+Write-Host "  +--------------------------------------------------------------+" -ForegroundColor Green
 Write-Host ""
 Write-Host "  Access your app from ANY device on the network:" -ForegroundColor Cyan
-$serverIP = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notmatch "127\." -and $_.IPAddress -notmatch "169\." } | Select-Object -First 1).IPAddress
-Write-Host "  🌐  Frontend  : https://$serverIP/" -ForegroundColor White
-Write-Host "  🔌  API       : https://$serverIP/api/" -ForegroundColor White
-Write-Host "  🗄️   phpMyAdmin: https://$serverIP/phpmyadmin/" -ForegroundColor White
+Write-Host "  Frontend   : https://$serverIP/" -ForegroundColor White
+Write-Host "  API        : https://$serverIP/api/" -ForegroundColor White
+Write-Host "  phpMyAdmin : https://$serverIP/phpmyadmin/" -ForegroundColor White
 Write-Host ""
-Write-Host "  ⚠️  STILL TO DO (manual — takes 5 minutes):" -ForegroundColor Yellow
-Write-Host "  1. Open webhook_receiver.ps1 and set your WEBHOOK_SECRET" -ForegroundColor White
-Write-Host "     File: $DEPLOY_PATH\deploy\webhook_receiver.ps1" -ForegroundColor Gray
-Write-Host "  2. Restart-Service MasterHubWebhook" -ForegroundColor White
+Write-Host "  STILL TO DO (manual -- takes 5 minutes):" -ForegroundColor Yellow
+Write-Host "  1. Set WEBHOOK_SECRET in:" -ForegroundColor White
+Write-Host "     $DEPLOY_PATH\deploy\webhook_receiver.ps1" -ForegroundColor Gray
+Write-Host "  2. Run: Restart-Service MasterHubWebhook" -ForegroundColor White
 Write-Host "  3. Add GitHub Webhook:" -ForegroundColor White
-Write-Host "     → GitHub repo → Settings → Webhooks → Add webhook" -ForegroundColor Gray
-Write-Host "     → Payload URL: http://${serverIP}:9000/deploy/" -ForegroundColor Gray
-Write-Host "     → Secret: (same as WEBHOOK_SECRET)" -ForegroundColor Gray
+Write-Host "     GitHub repo -> Settings -> Webhooks -> Add webhook" -ForegroundColor Gray
+Write-Host "     Payload URL : http://${serverIP}:9000/deploy/" -ForegroundColor Gray
+Write-Host "     Secret      : (same as WEBHOOK_SECRET)" -ForegroundColor Gray
 Write-Host "  4. Accept SSL warning in browser (self-signed cert)" -ForegroundColor White
-Write-Host "     → Click Advanced → Proceed to site" -ForegroundColor Gray
+Write-Host "     Click Advanced -> Proceed to site" -ForegroundColor Gray
 Write-Host ""
-Write-Host "  📋  Useful commands:" -ForegroundColor Cyan
-Write-Host "  docker ps                    — see running containers" -ForegroundColor Gray
-Write-Host "  docker compose logs -f       — live container logs" -ForegroundColor Gray
-Write-Host "  Get-Service MasterHubWebhook — check webhook service" -ForegroundColor Gray
+Write-Host "  Useful commands:" -ForegroundColor Cyan
+Write-Host "  docker ps                     -- see running containers" -ForegroundColor Gray
+Write-Host "  docker compose logs -f        -- live container logs" -ForegroundColor Gray
+Write-Host "  Get-Service MasterHubWebhook  -- check webhook service" -ForegroundColor Gray
 Write-Host ""
