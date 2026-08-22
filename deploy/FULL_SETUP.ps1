@@ -1,5 +1,5 @@
 # =============================================================================
-#  Master Hub -- FULL SERVER SETUP
+#  Master Hub -- FULL SERVER SETUP (No Docker)
 #  Run as Administrator. Just runs straight through, no prompts.
 #  USAGE:
 #    Set-ExecutionPolicy Bypass -Scope Process -Force
@@ -27,94 +27,9 @@ if (-not $gitCmd) { Write-Fail "Git not found. Install Git first from https://gi
 Write-Ok "Git found: $gitCmd"
 
 # =============================================================================
-# STEP 1 -- Enable WSL2 Windows Features (reboots if not already enabled)
+# STEP 1 -- IIS + URL Rewrite + ARR
 # =============================================================================
-Write-Step "STEP 1/7 - Enable WSL2 Features"
-
-$wslState = (Get-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux -ErrorAction SilentlyContinue).State
-$vmState  = (Get-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform -ErrorAction SilentlyContinue).State
-
-if ($wslState -eq "Enabled" -and $vmState -eq "Enabled") {
-    Write-Ok "WSL2 features already enabled. Skipping."
-} else {
-    Write-Info "Enabling Containers feature..."
-    Enable-WindowsOptionalFeature -Online -FeatureName containers -All -NoRestart | Out-Null
-    Write-Info "Enabling WSL feature..."
-    dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart | Out-Null
-    Write-Info "Enabling VirtualMachinePlatform..."
-    dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart | Out-Null
-    Write-Ok "Features enabled."
-    Write-Warn "SERVER MUST REBOOT. After reboot, run this script again."
-    Start-Sleep -Seconds 3
-    Restart-Computer -Force
-    exit
-}
-
-# =============================================================================
-# STEP 2 -- WSL2 Kernel Update + Ubuntu
-# =============================================================================
-Write-Step "STEP 2/7 - WSL2 Kernel and Ubuntu"
-
-$wslKernelOk = $false
-try { $null = wsl --list --verbose 2>&1 ; if ($LASTEXITCODE -eq 0) { $wslKernelOk = $true } } catch {}
-
-if ($wslKernelOk) {
-    Write-Ok "WSL2 kernel already installed. Skipping."
-} else {
-    Write-Info "Downloading WSL2 kernel update..."
-    $wslMsi = "$env:TEMP\wsl_update.msi"
-    Invoke-WebRequest -Uri "https://wslstorestorage.blob.core.windows.net/wslblob/wsl_update_x64.msi" -OutFile $wslMsi -UseBasicParsing
-    Start-Process msiexec.exe -ArgumentList "/i `"$wslMsi`" /quiet /norestart" -Wait
-    Remove-Item $wslMsi -Force -ErrorAction SilentlyContinue
-    wsl --set-default-version 2 | Out-Null
-    Write-Info "Installing Ubuntu (2-3 min)..."
-    wsl --install -d Ubuntu --no-launch | Out-Null
-    Write-Ok "WSL2 kernel and Ubuntu installed."
-}
-
-# =============================================================================
-# STEP 3 -- Docker Engine + Docker Compose (replaces Docker Desktop)
-# =============================================================================
-Write-Step "STEP 3/7 - Docker Engine and Docker Compose"
-
-$dockerOk = $false
-try { $null = & docker --version 2>&1 ; if ($LASTEXITCODE -eq 0) { $dockerOk = $true } } catch {}
-
-if ($dockerOk) {
-    Write-Ok "Docker already installed: $(& docker --version 2>&1)"
-} else {
-    Write-Info "Installing DockerMsftProvider module..."
-    Install-Module -Name DockerMsftProvider -Repository PSGallery -Force -SkipPublisherCheck
-
-    Write-Info "Installing Docker Engine (3-5 minutes)..."
-    Install-Package -Name docker -ProviderName DockerMsftProvider -Force -RequiredVersion 20.10.9
-
-    Start-Service docker
-    Set-Service -Name docker -StartupType Automatic
-
-    Write-Info "Waiting for Docker to start..."
-    $count = 0
-    while ($count -lt 20) {
-        $null = & docker info 2>&1
-        if ($LASTEXITCODE -eq 0) { break }
-        $count++ ; Start-Sleep -Seconds 5
-    }
-    Write-Ok "Docker Engine running."
-
-    Write-Info "Installing Docker Compose v2..."
-    $composePath = "C:\Program Files\Docker\cli-plugins"
-    New-Item -ItemType Directory -Path $composePath -Force | Out-Null
-    Invoke-WebRequest `
-        -Uri "https://github.com/docker/compose/releases/download/v2.29.2/docker-compose-windows-x86_64.exe" `
-        -OutFile "$composePath\docker-compose.exe" `
-        -UseBasicParsing
-    Write-Ok "Docker Compose v2 installed."
-}
-
-# =============================================================================
-# STEP 4 -- IIS + URL Rewrite + ARR
-# =============================================================================
-Write-Step "STEP 4/7 - IIS + URL Rewrite + ARR"
+Write-Step "STEP 1/6 - IIS + URL Rewrite + ARR"
 
 $iisOk     = (Get-WindowsFeature -Name Web-Server -ErrorAction SilentlyContinue).Installed
 $rewriteOk = Test-Path "$env:SystemRoot\system32\inetsrv\rewrite.dll"
@@ -122,7 +37,7 @@ $arrOk     = Test-Path "$env:ProgramFiles\IIS\Application Request Routing"
 
 if (-not $iisOk) {
     Write-Info "Installing IIS..."
-    Install-WindowsFeature -Name Web-Server, Web-Mgmt-Tools, Web-Http-Redirect -IncludeManagementTools | Out-Null
+    Install-WindowsFeature -Name Web-Server, Web-Mgmt-Tools, Web-Http-Redirect, Web-CGI -IncludeManagementTools | Out-Null
     Write-Ok "IIS installed."
 } else { Write-Ok "IIS already installed." }
 
@@ -151,9 +66,9 @@ if (Test-Path $appCmd) {
 }
 
 # =============================================================================
-# STEP 5 -- Clone Repository
+# STEP 2 -- Clone Repository
 # =============================================================================
-Write-Step "STEP 5/7 - Clone Repository"
+Write-Step "STEP 2/6 - Clone Repository"
 
 if (Test-Path "$DEPLOY_PATH\.git") {
     Write-Ok "Repo already cloned at $DEPLOY_PATH. Pulling latest..."
@@ -167,43 +82,50 @@ if (Test-Path "$DEPLOY_PATH\.git") {
 }
 
 # =============================================================================
-# STEP 6 -- Configure .env and Start Docker Containers
+# STEP 3 -- Configure .env
 # =============================================================================
-Write-Step "STEP 6/7 - Configure .env and Start Containers"
+Write-Step "STEP 3/6 - Configure .env"
 
 $envPath = "$DEPLOY_PATH\Backend-laravel\.env"
 if (-not (Test-Path $envPath)) {
     Write-Info "Creating .env from example..."
     Copy-Item "$DEPLOY_PATH\Backend-laravel\.env.example" $envPath
-    $c = Get-Content $envPath
-    $c = $c -replace "DB_CONNECTION=.*",  "DB_CONNECTION=mysql"
-    $c = $c -replace "# DB_HOST=.*",      "DB_HOST=db"
-    $c = $c -replace "# DB_PORT=.*",      "DB_PORT=3306"
-    $c = $c -replace "# DB_DATABASE=.*",  "DB_DATABASE=Master_Hub"
-    $c = $c -replace "# DB_USERNAME=.*",  "DB_USERNAME=root"
-    $c = $c -replace "# DB_PASSWORD=.*",  "DB_PASSWORD=root"
-    $c | Set-Content $envPath
-    Write-Ok ".env configured."
+    Write-Ok ".env created. Edit it now to set DB_HOST, DB_DATABASE, DB_USERNAME, DB_PASSWORD, APP_URL, etc."
+    Write-Warn "Update $envPath with your real database credentials before continuing."
+    Read-Host "Press Enter after editing .env to continue..."
 } else {
     Write-Ok ".env already exists."
 }
 
-Write-Info "Starting all 4 Docker containers (first run: 5-10 minutes)..."
-Set-Location $DEPLOY_PATH
-& docker compose up --build -d
-if ($LASTEXITCODE -ne 0) {
-    Write-Warn "docker compose had errors. Check with: docker compose logs"
-} else {
-    Write-Ok "All 4 containers started."
-}
+# =============================================================================
+# STEP 4 -- Install dependencies & build
+# =============================================================================
+Write-Step "STEP 4/6 - Install Dependencies and Build"
 
-Write-Info "Running containers:"
-& docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+Write-Info "Installing Composer dependencies..."
+Set-Location "$DEPLOY_PATH\Backend-laravel"
+& composer install --no-dev --optimize-autoloader
+if ($LASTEXITCODE -ne 0) { Write-Warn "composer install had errors." } else { Write-Ok "Composer done." }
+
+Write-Info "Running Laravel setup commands..."
+& php artisan key:generate --force
+& php artisan migrate --force
+& php artisan storage:link --force
+& php artisan config:cache
+& php artisan route:cache
+& php artisan view:cache
+Write-Ok "Laravel setup done."
+
+Write-Info "Building React frontend..."
+Set-Location "$DEPLOY_PATH\Frontend-react"
+& npm install
+& npm run build
+if ($LASTEXITCODE -ne 0) { Write-Warn "npm build had errors." } else { Write-Ok "Frontend build done." }
 
 # =============================================================================
-# STEP 7 -- IIS Site + SSL Certificate + Webhook Service
+# STEP 5 -- IIS Site + SSL Certificate
 # =============================================================================
-Write-Step "STEP 7/7 - IIS Site + SSL + Webhook Service"
+Write-Step "STEP 5/6 - IIS Site + SSL"
 
 Import-Module WebAdministration -ErrorAction SilentlyContinue
 
@@ -225,6 +147,11 @@ if (-not (Get-Website -Name "MasterHub" -ErrorAction SilentlyContinue)) {
 } else {
     Write-Ok "IIS site MasterHub already exists."
 }
+
+# =============================================================================
+# STEP 6 -- Webhook Service
+# =============================================================================
+Write-Step "STEP 6/6 - Webhook Service"
 
 $svc = Get-Service -Name "MasterHubWebhook" -ErrorAction SilentlyContinue
 if (-not $svc) {
@@ -253,7 +180,6 @@ Write-Host ""
 Write-Host "Access from any device on the network:" -ForegroundColor Cyan
 Write-Host "  Frontend   : https://$ip/" -ForegroundColor White
 Write-Host "  API        : https://$ip/api/" -ForegroundColor White
-Write-Host "  phpMyAdmin : https://$ip/phpmyadmin/" -ForegroundColor White
 Write-Host ""
 Write-Host "3 manual steps remaining:" -ForegroundColor Yellow
 Write-Host "  1. Set WEBHOOK_SECRET in: $DEPLOY_PATH\deploy\webhook_receiver.ps1" -ForegroundColor White

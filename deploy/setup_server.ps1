@@ -1,7 +1,7 @@
 # =============================================================================
 #  Master Hub — One-Time Server Bootstrap Script
 #  Run this ONCE on a fresh Windows Server as Administrator.
-#  It sets up everything needed to host Master Hub via IIS + Docker.
+#  Sets up everything needed to host Master Hub via IIS (no Docker).
 #
 #  USAGE:
 #    Right-click PowerShell → "Run as Administrator"
@@ -38,18 +38,35 @@ try {
     Write-Fail "Git is not installed. Download from https://git-scm.com/download/win"
 }
 
-# ── 2. Check Docker ───────────────────────────────────────────────────────────
-Write-Step "Checking Docker installation"
+# ── 2. Check PHP ──────────────────────────────────────────────────────────────
+Write-Step "Checking PHP installation"
 try {
-    $dockerVer = & docker --version 2>&1
-    Write-Ok "Docker found: $dockerVer"
-    $composeVer = & docker compose version 2>&1
-    Write-Ok "Docker Compose: $composeVer"
+    $phpVer = & php --version 2>&1 | Select-Object -First 1
+    Write-Ok "PHP found: $phpVer"
 } catch {
-    Write-Fail "Docker is not installed or not running. Download Docker Desktop from https://www.docker.com/products/docker-desktop/"
+    Write-Fail "PHP is not installed or not on PATH. Install PHP 8.x and add it to PATH."
 }
 
-# ── 3. Check IIS Modules ──────────────────────────────────────────────────────
+# ── 3. Check Composer ─────────────────────────────────────────────────────────
+Write-Step "Checking Composer installation"
+try {
+    $composerVer = & composer --version 2>&1
+    Write-Ok "Composer found: $composerVer"
+} catch {
+    Write-Fail "Composer is not installed. Download from https://getcomposer.org/download/"
+}
+
+# ── 4. Check Node.js / npm ────────────────────────────────────────────────────
+Write-Step "Checking Node.js and npm"
+try {
+    $nodeVer = & node --version 2>&1
+    $npmVer  = & npm --version 2>&1
+    Write-Ok "Node.js: $nodeVer  |  npm: $npmVer"
+} catch {
+    Write-Fail "Node.js / npm is not installed. Download from https://nodejs.org/"
+}
+
+# ── 5. Check IIS Modules ──────────────────────────────────────────────────────
 Write-Step "Checking IIS URL Rewrite & ARR modules"
 $arrPath     = "$env:ProgramFiles\IIS\Application Request Routing"
 $rewritePath = "$env:SystemRoot\system32\inetsrv\rewrite.dll"
@@ -68,7 +85,7 @@ if (-not (Test-Path $arrPath)) {
     Write-Ok "IIS ARR module found."
 }
 
-# ── 4. Generate SSH Deploy Key ────────────────────────────────────────────────
+# ── 6. Generate SSH Deploy Key ────────────────────────────────────────────────
 Write-Step "Setting up SSH Deploy Key for private GitHub repo"
 
 if (-not (Test-Path $SSH_DIR)) {
@@ -101,7 +118,7 @@ if ($githubKey) {
     Write-Warn "Could not reach github.com for ssh-keyscan. Skipping known_hosts setup."
 }
 
-# ── 5. Show public key — User must add this to GitHub ─────────────────────────
+# ── 7. Show public key — User must add this to GitHub ─────────────────────────
 Write-Step "ACTION REQUIRED: Add this Deploy Key to GitHub"
 $pubKey = Get-Content "$SSH_KEY_PATH.pub"
 Write-Host ""
@@ -133,7 +150,7 @@ if (-not (Select-String -Path $sshConfig -Pattern "master_hub" -Quiet -ErrorActi
     Write-Ok "SSH config already configured."
 }
 
-# ── 6. Clone the repository ───────────────────────────────────────────────────
+# ── 8. Clone the repository ───────────────────────────────────────────────────
 Write-Step "Cloning Master Hub repository to $DEPLOY_PATH"
 Write-Host "  IMPORTANT: Press Enter when you have added the Deploy Key to GitHub." -ForegroundColor Yellow
 Read-Host "  Press Enter to continue..."
@@ -152,7 +169,7 @@ if (Test-Path "$DEPLOY_PATH\.git") {
     Write-Ok "Repository cloned to $DEPLOY_PATH"
 }
 
-# ── 7. Create .env file from example ─────────────────────────────────────────
+# ── 9. Create .env file from example ─────────────────────────────────────────
 Write-Step "Setting up .env for Laravel backend"
 $envPath    = "$DEPLOY_PATH\Backend-laravel\.env"
 $envExample = "$DEPLOY_PATH\Backend-laravel\.env.example"
@@ -162,29 +179,49 @@ if (Test-Path $envPath) {
 } else {
     Copy-Item $envExample $envPath
     Write-Ok ".env created from .env.example."
-    Write-Warn "Review $envPath and update APP_URL, any API keys, mail settings, etc."
+    Write-Warn "Review $envPath and update APP_URL, DB_HOST, DB_DATABASE, DB_USERNAME, DB_PASSWORD, mail settings, etc."
 }
 
-# ── 8. Start Docker containers for the first time ────────────────────────────
-Write-Step "Starting Docker containers (first run — this may take a few minutes)"
-Set-Location $DEPLOY_PATH
-& docker compose up --build -d
-
+# ── 10. Install Composer dependencies ─────────────────────────────────────────
+Write-Step "Installing Composer dependencies"
+Set-Location "$DEPLOY_PATH\Backend-laravel"
+& composer install --no-dev --optimize-autoloader
 if ($LASTEXITCODE -ne 0) {
-    Write-Warn "docker compose up returned non-zero. Check logs: docker compose logs"
+    Write-Warn "composer install had errors. Check output above."
 } else {
-    Write-Ok "Docker containers started."
+    Write-Ok "Composer dependencies installed."
 }
 
-# ── 9. Install webhook Windows Service ────────────────────────────────────────
+# ── 11. Run Laravel setup commands ────────────────────────────────────────────
+Write-Step "Running Laravel setup (key:generate, migrate, cache)"
+& php artisan key:generate --force
+& php artisan migrate --force
+& php artisan storage:link --force
+& php artisan config:cache
+& php artisan route:cache
+& php artisan view:cache
+Write-Ok "Laravel setup complete."
+
+# ── 12. Build React frontend ──────────────────────────────────────────────────
+Write-Step "Building React frontend"
+Set-Location "$DEPLOY_PATH\Frontend-react"
+& npm install
+& npm run build
+if ($LASTEXITCODE -ne 0) {
+    Write-Warn "npm run build had errors. Check output above."
+} else {
+    Write-Ok "Frontend built successfully."
+}
+
+# ── 13. Install webhook Windows Service ────────────────────────────────────────
 Write-Step "Installing GitHub Webhook Windows Service"
 & "$DEPLOY_PATH\deploy\install_service.ps1"
 
-# ── 10. Final checklist ───────────────────────────────────────────────────────
+# ── 14. Final checklist ───────────────────────────────────────────────────────
 Write-Host ""
-Write-Host "=============================================================" -ForegroundColor Green
+Write-Host "==============================================================" -ForegroundColor Green
 Write-Host "  MASTER HUB SERVER SETUP COMPLETE — Manual Steps Remaining  " -ForegroundColor Green
-Write-Host "=============================================================" -ForegroundColor Green
+Write-Host "==============================================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "  STILL TODO (manual steps in IIS Manager):" -ForegroundColor Yellow
 Write-Host ""
@@ -216,7 +253,4 @@ Write-Host "      Payload URL : http://<YOUR_SERVER_IP>:9000/deploy/" -Foregroun
 Write-Host "      Content type: application/json" -ForegroundColor Gray
 Write-Host "      Secret      : (same as WEBHOOK_SECRET in webhook_receiver.ps1)" -ForegroundColor Gray
 Write-Host "      Events      : Just the push event" -ForegroundColor Gray
-Write-Host ""
-Write-Host "  Docker containers running:" -ForegroundColor Cyan
-& docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 Write-Host ""

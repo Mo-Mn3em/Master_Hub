@@ -2,7 +2,7 @@
 #  Master Hub — GitHub Webhook Receiver
 #  Runs as a Windows Service (via NSSM). Listens on port 9000.
 #  Validates GitHub HMAC-SHA256 signature, checks branch = main,
-#  then calls deploy.ps1 to pull + rebuild Docker containers.
+#  then calls deploy.ps1 to pull, build, and restart the app.
 # =============================================================================
 
 # ── CONFIGURATION ─────────────────────────────────────────────────────────────

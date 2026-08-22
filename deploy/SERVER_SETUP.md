@@ -1,6 +1,6 @@
 # Master Hub — Server Setup Guide
 
-> **Complete step-by-step guide to deploy Master Hub on a Windows Server with IIS + Docker and auto-deploy from GitHub.**
+> **Complete step-by-step guide to deploy Master Hub on a Windows Server with IIS (no Docker).**
 
 ---
 
@@ -9,10 +9,14 @@
 | Tool | Download |
 |------|---------|
 | Git for Windows | https://git-scm.com/download/win |
-| Docker Desktop for Windows | https://www.docker.com/products/docker-desktop/ |
+| PHP 8.x (Non-Thread Safe) | https://windows.php.net/download/ |
+| Composer | https://getcomposer.org/download/ |
+| Node.js (LTS) + npm | https://nodejs.org/ |
 | IIS (Windows Feature) | Via Server Manager → Add Roles → Web Server (IIS) |
 | IIS URL Rewrite 2.x | https://www.iis.net/downloads/microsoft/url-rewrite |
 | IIS Application Request Routing (ARR) | https://www.iis.net/downloads/microsoft/application-request-routing |
+
+> **PHP tip**: After installing PHP, copy `php.ini-production` to `php.ini`, enable the extensions your Laravel app needs (`pdo_mysql`, `mbstring`, `openssl`, `curl`, `gd`, `fileinfo`, `zip`), and add PHP to your system PATH.
 
 ---
 
@@ -27,11 +31,13 @@ cd C:\path\to\this\repo\deploy
 ```
 
 This script will:
-- ✅ Check Git, Docker, IIS modules
+- ✅ Check Git, PHP, Composer, Node.js, and IIS modules
 - ✅ Generate an SSH Deploy Key
 - ✅ **Print the public key** (you'll add this to GitHub)
 - ✅ Clone the private repo to `C:\inetpub\master_hub`
-- ✅ Start all 4 Docker containers
+- ✅ Create `.env` from `.env.example`
+- ✅ Run `composer install` and Laravel artisan setup commands
+- ✅ Build the React frontend with `npm run build`
 - ✅ Install the webhook listener as a Windows Service
 
 ---
@@ -112,16 +118,6 @@ This script will:
 
 ## Verification
 
-### Check Docker containers are running
-```powershell
-docker ps
-```
-You should see 4 containers:
-- `master_hub_frontend` → port 5173
-- `master_hub_backend` → port 8000
-- `master_hub_db` → port 3307
-- `master_hub_phpmyadmin` → port 8080
-
 ### Check webhook service is running
 ```powershell
 Get-Service MasterHubWebhook
@@ -131,9 +127,9 @@ Status should be `Running`.
 ### Test auto-deploy
 1. Make any small change in your code (e.g. add a comment)
 2. Commit and push to `main` on GitHub
-3. Wait ~15–30 seconds
+3. Wait ~30–60 seconds (composer + npm build take a moment)
 4. Check `C:\inetpub\master_hub\deploy\logs\deploy.log`
-5. You should see `git pull` and `docker compose up` output
+5. You should see `git pull`, `composer install`, `artisan`, and `npm run build` output
 6. Refresh the site in your browser — change should be live ✅
 
 ### Browse the app
@@ -141,7 +137,6 @@ Status should be `Running`.
 |-----|-------------|
 | `https://<server-ip>/` | React Frontend |
 | `https://<server-ip>/api/` | Laravel API |
-| `https://<server-ip>/phpmyadmin/` | phpMyAdmin GUI |
 
 ---
 
@@ -151,20 +146,23 @@ Status should be `Running`.
 |---------|-------|
 | Webhook not triggering | `deploy\logs\webhook.log` — is the service running? Is port 9000 open in firewall? |
 | `git pull` fails | SSH Deploy Key added to GitHub? Run `ssh -T git@github.com` to test |
-| Docker containers not starting | `docker compose logs` in `C:\inetpub\master_hub` |
-| IIS returning 502 Bad Gateway | Is ARR proxy enabled? Are Docker containers running? |
+| `composer install` fails | Is PHP on PATH? Run `php --version` and `composer --version` in a terminal |
+| `npm run build` fails | Is Node.js on PATH? Run `node --version` and `npm --version` in a terminal |
+| IIS returning 502 Bad Gateway | Is ARR proxy enabled? Is the PHP handler configured in IIS? |
 | Browser shows certificate warning | Expected for self-signed cert — click Advanced → Proceed |
+| Laravel 500 error | Check `Backend-laravel\storage\logs\laravel.log` |
 
 ---
 
 ## Log Files
 
 | Log | What it contains |
-|-----|-----------------|
+|-----|--------------------|
 | `deploy\logs\webhook.log` | All incoming webhook requests + validation results |
-| `deploy\logs\deploy.log` | git pull + docker compose output per deploy |
+| `deploy\logs\deploy.log` | git pull + composer + artisan + npm build output per deploy |
 | `deploy\logs\service_stdout.log` | NSSM service stdout |
 | `deploy\logs\service_stderr.log` | NSSM service stderr |
+| `Backend-laravel\storage\logs\laravel.log` | Laravel application errors |
 
 ---
 
