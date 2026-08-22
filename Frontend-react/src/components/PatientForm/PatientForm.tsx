@@ -395,9 +395,17 @@ export const PatientForm: React.FC = () => {
         const isUnverified = nileStatus === 'unVerified' || nileStatus === 'unverified' || (!pData.patientID && !pData.idNumber && !pData.firstNameAr && !pData.firstNameEn);
 
         if (isUnverified) {
+          // Keep entered phone & SSN in the form so coordinator doesn't need to retype
+          setLocalPatient(prev => ({
+            ...prev,
+            bas_phone: mobile || prev.bas_phone,
+            bas_ssn: ssn || prev.bas_ssn,
+          }));
+          setDirty(true);
+
           setNileVerificationStatus({
             success: false,
-            message: 'Patient NOT found in Nile Alamal database (Unverified). Please check Mobile & National ID / SSN.',
+            message: 'Patient NOT registered in Nile Alamal database. Mobile & National ID preserved for manual entry below.',
           });
           return;
         }
@@ -435,6 +443,15 @@ export const PatientForm: React.FC = () => {
           } else if (rawDob.includes('-')) {
             dobVal = rawDob.split('T')[0].split(' ')[0];
           }
+        }
+
+        // Extract phone numbers from contactMethods if present
+        let contactPhone = mobile;
+        let contactPhone2 = '';
+        if (Array.isArray(pData.contactMethods)) {
+          const phones = pData.contactMethods.map((c: any) => c.value || c.phoneNumber || c.number || c).filter(Boolean);
+          if (phones[0]) contactPhone = String(phones[0]);
+          if (phones[1]) contactPhone2 = String(phones[1]);
         }
 
         // Governorate mapping
@@ -484,6 +501,8 @@ export const PatientForm: React.FC = () => {
           bas_dob: dobVal || prev.bas_dob,
           bas_gov: govVal || prev.bas_gov,
           bas_blood: bloodVal || prev.bas_blood,
+          bas_phone: contactPhone || prev.bas_phone,
+          bas_phone2: contactPhone2 || prev.bas_phone2,
         }));
         setDirty(true);
 
