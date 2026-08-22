@@ -89,12 +89,14 @@ class NileApiService
 
         // Attempt request with Token if credentials exist, otherwise direct JSON POST
         try {
-            $req = Http::acceptJson()->asJson()->timeout(10);
+            $req = Http::acceptJson()->asJson()->timeout(15);
 
             if (!empty($this->username) && !empty($this->password)) {
                 try {
                     $token = $this->getToken();
-                    $req = $req->withToken($token);
+                    if ($token) {
+                        $req = $req->withToken($token);
+                    }
                 } catch (Exception $e) {
                     Log::warning('Nile API token retrieval skipped or failed: ' . $e->getMessage());
                 }
@@ -102,10 +104,14 @@ class NileApiService
 
             $response = $req->post($url, $payload);
 
-            // If 401 Unauthorized, retry once if credentials available
-            if ($response->status() === 401 && !empty($this->username)) {
-                $token = $this->getToken(true);
-                $response = Http::withToken($token)->acceptJson()->asJson()->timeout(10)->post($url, $payload);
+            // If 401 Unauthorized and credentials are provided, attempt token refresh once
+            if ($response->status() === 401 && !empty($this->username) && !empty($this->password)) {
+                try {
+                    $token = $this->getToken(true);
+                    $response = Http::withToken($token)->acceptJson()->asJson()->timeout(15)->post($url, $payload);
+                } catch (Exception $e) {
+                    Log::warning('Nile API token retry failed: ' . $e->getMessage());
+                }
             }
 
             if ($response->failed()) {
