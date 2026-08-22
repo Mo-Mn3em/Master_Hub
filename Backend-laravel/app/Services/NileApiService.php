@@ -75,16 +75,11 @@ class NileApiService
     {
         $url = $this->baseUrl . '/nile/verify-patient';
 
-        $typeOfId = !empty($typeOfIdentification) ? $typeOfIdentification : 'SSN';
-        if (strtoupper($typeOfId) === 'NATIONALID') {
-            $typeOfId = 'SSN';
-        }
-
-        // Exact JSON payload matching Postman integration specification
+        // Exact JSON payload with TypeOfIdentification defaulted to SSN
         $payload = [
             'Patient' => [
                 'mobile'               => $mobile,
-                'TypeOfIdentification' => $typeOfId,
+                'TypeOfIdentification' => 'SSN',
                 'IdentificationNumber' => $identificationNumber,
             ]
         ];
