@@ -158,5 +158,4 @@ class NileApiService
             'data'    => null,
         ];
     }
-    }
 }
