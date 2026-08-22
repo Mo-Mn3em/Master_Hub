@@ -35,15 +35,23 @@ class AuthController extends Controller
         // Revoke old tokens for this user (single-session)
         $user->tokens()->delete();
 
-        // Issue a new Sanctum token
-        $token = $user->createToken('master_hub_token')->plainTextToken;
+        // Calculate next 5:00 AM expiration
+        $now = \Carbon\Carbon::now();
+        $expiresAt = $now->copy()->setTime(5, 0, 0);
+        if ($now->greaterThanOrEqualTo($expiresAt)) {
+            $expiresAt->addDay();
+        }
+
+        // Issue a new Sanctum token expiring at 5:00 AM
+        $token = $user->createToken('master_hub_token', ['*'], $expiresAt)->plainTextToken;
 
         return response()->json([
             'user' => [
                 'id'   => $user->id,
                 'name' => $user->name,
             ],
-            'token' => $token,
+            'token'      => $token,
+            'expires_at' => $expiresAt->toIso8601String(),
         ]);
     }
 

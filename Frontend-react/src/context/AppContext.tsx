@@ -154,10 +154,58 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // ── Automatic Daily 5:00 AM Logout Watchdog ──────────────────────────────────
   useEffect(() => {
-    // Always start on login screen every time application opens
-    setCurrentUser(null);
-    localStorage.removeItem('master_hub_user');
+    if (!currentUser) return;
+
+    const getNext5AMTimestamp = () => {
+      const now = new Date();
+      const next5AM = new Date(now);
+      next5AM.setHours(5, 0, 0, 0);
+      if (now >= next5AM) {
+        next5AM.setDate(next5AM.getDate() + 1);
+      }
+      return next5AM.getTime();
+    };
+
+    const targetExpiresAt = getNext5AMTimestamp();
+    localStorage.setItem('master_hub_expires_at', String(targetExpiresAt));
+
+    const checkSessionExpiry = () => {
+      const expiresAt = Number(localStorage.getItem('master_hub_expires_at'));
+      if (expiresAt && Date.now() >= expiresAt) {
+        logout();
+      }
+    };
+
+    // 1. Timeout for exact 5:00 AM trigger
+    const msUntil5AM = targetExpiresAt - Date.now();
+    const timer = setTimeout(() => {
+      logout();
+    }, Math.max(msUntil5AM, 1000));
+
+    // 2. Periodic interval check (every 30s) + check on wake/focus
+    const interval = setInterval(checkSessionExpiry, 30000);
+    window.addEventListener('focus', checkSessionExpiry);
+    document.addEventListener('visibilitychange', checkSessionExpiry);
+
+    return () => {
+      clearTimeout(timer);
+      clearInterval(interval);
+      window.removeEventListener('focus', checkSessionExpiry);
+      document.removeEventListener('visibilitychange', checkSessionExpiry);
+    };
+  }, [currentUser]);
+
+  useEffect(() => {
+    // Check if previous session expired before restoring
+    const expiresAt = Number(localStorage.getItem('master_hub_expires_at'));
+    if (expiresAt && Date.now() >= expiresAt) {
+      setCurrentUser(null);
+      localStorage.removeItem('master_hub_user');
+      localStorage.removeItem('master_hub_token');
+      localStorage.removeItem('master_hub_expires_at');
+    }
 
     loadPatients();
 

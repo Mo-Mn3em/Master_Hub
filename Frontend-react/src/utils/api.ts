@@ -1,7 +1,7 @@
 import type { Patient } from '../types';
 import { patientToApi, caseFromApi, type BackendCase } from './apiMapper';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 
 // ── Token helpers ─────────────────────────────────────────────────────────────
 const TOKEN_KEY = 'master_hub_token';
