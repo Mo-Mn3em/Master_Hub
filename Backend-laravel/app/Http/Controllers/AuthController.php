@@ -47,11 +47,45 @@ class AuthController extends Controller
 
         return response()->json([
             'user' => [
-                'id'   => $user->id,
-                'name' => $user->name,
+                'id'              => $user->id,
+                'name'            => $user->name,
+                'email'           => $user->email,
+                'role'            => $user->role ?? 'user',
+                'department_code' => $user->department_code ?? null,
             ],
             'token'      => $token,
             'expires_at' => $expiresAt->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * Change Password for authenticated user.
+     */
+    public function changePassword(Request $request): JsonResponse
+    {
+        $request->validate([
+            'current_password' => 'required|string',
+            'new_password'     => 'required|string|min:4|confirmed',
+        ]);
+
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json([
+                'message' => 'Current password does not match our records.',
+                'errors'  => ['current_password' => ['Current password is incorrect.']]
+            ], 422);
+        }
+
+        $user->password = Hash::make($request->new_password);
+        $user->save();
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Password changed successfully.'
         ]);
     }
 

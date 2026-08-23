@@ -142,3 +142,14 @@ export interface ClinicalLog {
   action: string;
   details: string;
 }
+
+export interface UserAccount {
+  id: number;
+  name: string;
+  email: string;
+  role: 'admin' | 'user';
+  department_code?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+

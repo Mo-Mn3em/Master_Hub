@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import DEPARTMENTS from '../../utils/departmentsData';
+import { ChangePasswordModal } from '../Auth/ChangePasswordModal';
+import { UserManagementModal } from '../Admin/UserManagementModal';
 import { 
   Users, 
   Calendar, 
@@ -25,7 +27,10 @@ import {
   Layers,
   Volume2,
   Target,
-  Smile
+  Smile,
+  KeyRound,
+  UserCog,
+  ShieldCheck
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -34,7 +39,9 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => {
-  const { currentModule, setCurrentModule, currentUser, logout } = useApp();
+  const { currentModule, setCurrentModule, currentUser, isAdmin, logout } = useApp();
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isUserMgmtModalOpen, setIsUserMgmtModalOpen] = useState(false);
 
   const handleNavClick = (moduleCode: string) => {
     setCurrentModule(moduleCode);
@@ -43,9 +50,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
     }
   };
 
-  const getInitials = (name: string) => {
+  const getInitials = (name?: string) => {
     if (!name) return '?';
     return name.split(' ')[0].substring(0, 2).toUpperCase();
+  };
+
+  const getDeptLabel = (code?: string | null) => {
+    if (!code) return null;
+    const dept = DEPARTMENTS.find(d => d.code.toLowerCase() === code.toLowerCase());
+    return dept?.label || code.toUpperCase();
   };
 
   const getDeptIcon = (code: string, color?: string) => {
@@ -69,70 +82,74 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
       case 'ndev': return <Brain className="w-4 h-4 flex-shrink-0" style={{ color: iconColor }} />;
       case 'livt': return <Heart className="w-4 h-4 flex-shrink-0" style={{ color: iconColor }} />;
       case 'dent': return <Smile className="w-4 h-4 flex-shrink-0" style={{ color: iconColor }} />;
+      case 'surg': return <Scissors className="w-4 h-4 flex-shrink-0" style={{ color: iconColor }} />;
       default:     return <Activity className="w-4 h-4 flex-shrink-0" style={{ color: iconColor }} />;
     }
   };
 
   return (
     <>
-      {/* Mobile Backdrop Overlay */}
-      {!collapsed && (
-        <div 
-          className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 md:hidden"
-          onClick={() => setCollapsed(true)}
-        />
-      )}
+      <nav className={`app-sidebar ${collapsed ? 'collapsed' : ''}`}>
+        {/* Toggle Button */}
+        <button 
+          className="sidebar-toggle-btn"
+          onClick={() => setCollapsed(!collapsed)}
+          title={collapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+          aria-label={collapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+        >
+          {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+        </button>
 
-      <nav id="sidebar" className={collapsed ? 'collapsed' : ''}>
-        {/* Brand/Logo Header */}
-        <div className="brand">
-          <div className="brand-icon" style={{ padding: 2, background: '#fff', borderRadius: 8, overflow: 'hidden' }}>
-            <img src="/NOH_logo.jpg" alt="NOH Logo" className="w-full h-full object-contain" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 6 }} />
+        {/* Brand Header */}
+        <div className="sidebar-brand">
+          <div className="brand-icon">
+            <ShieldAlert className="w-5 h-5 text-white" />
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="brand-text">PCC</div>
+          <div className="brand-text">
+            <div className="brand-title">MASTER HUB</div>
             <div className="brand-sub">Patient Coordinator Center</div>
           </div>
         </div>
 
-        {/* Navigation Sections */}
-        <div className="nav-links">
-          <div className="nav-section-label">General Operations</div>
+        {/* Scrollable Nav List */}
+        <div className="sidebar-nav">
+          {/* Main Views */}
+          <div className="nav-section-label">Main Views</div>
           
           <div 
             className={`nav-item ${currentModule === 'hub' ? 'active' : ''}`}
-            style={{ '--nav-accent': '#0d9488' } as React.CSSProperties}
+            style={{ '--nav-accent': '#0f766e' } as React.CSSProperties}
             onClick={() => handleNavClick('hub')}
           >
-            <Users className="w-4 h-4 flex-shrink-0" style={{ color: '#0d9488' }} />
-            <span>Global Directory</span>
+            <Users className="w-4 h-4 flex-shrink-0" style={{ color: '#0f766e' }} />
+            <span>Patient Hub</span>
+          </div>
+
+          <div 
+            className={`nav-item ${currentModule === 'coordinator' ? 'active' : ''}`}
+            style={{ '--nav-accent': '#0891b2' } as React.CSSProperties}
+            onClick={() => handleNavClick('coordinator')}
+          >
+            <Calendar className="w-4 h-4 flex-shrink-0" style={{ color: '#0891b2' }} />
+            <span>Coordinator Operations</span>
           </div>
 
           <div 
             className={`nav-item ${currentModule === 'anes' ? 'active' : ''}`}
-            style={{ '--nav-accent': '#8b5cf6' } as React.CSSProperties}
+            style={{ '--nav-accent': '#8e44ad' } as React.CSSProperties}
             onClick={() => handleNavClick('anes')}
           >
-            <Activity className="w-4 h-4 flex-shrink-0" style={{ color: '#8b5cf6' }} />
-            <span>Anesthesia Clinic</span>
+            <CalendarCheck className="w-4 h-4 flex-shrink-0" style={{ color: '#8e44ad' }} />
+            <span>Pre-Anesthesia Clinic</span>
           </div>
 
           <div 
-            className={`nav-item ${currentModule === 'surg' ? 'active' : ''}`}
-            style={{ '--nav-accent': '#10b981' } as React.CSSProperties}
-            onClick={() => handleNavClick('surg')}
+            className={`nav-item ${currentModule === 'stats' ? 'active' : ''}`}
+            style={{ '--nav-accent': '#6366f1' } as React.CSSProperties}
+            onClick={() => handleNavClick('stats')}
           >
-            <CalendarCheck className="w-4 h-4 flex-shrink-0" style={{ color: '#10b981' }} />
-            <span>Surgical List</span>
-          </div>
-
-          <div 
-            className={`nav-item ${currentModule === 'analytics' ? 'active' : ''}`}
-            style={{ '--nav-accent': '#f59e0b' } as React.CSSProperties}
-            onClick={() => handleNavClick('analytics')}
-          >
-            <PieChart className="w-4 h-4 flex-shrink-0" style={{ color: '#f59e0b' }} />
-            <span>Analytics & BI</span>
+            <PieChart className="w-4 h-4 flex-shrink-0" style={{ color: '#6366f1' }} />
+            <span>Analytics & Reports</span>
           </div>
 
           <div 
@@ -144,11 +161,28 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
             <span>Research Hub</span>
           </div>
 
+          {/* Admin Management Section */}
+          {isAdmin && (
+            <>
+              <div className="nav-section-label">Administration</div>
+              <div 
+                className="nav-item"
+                style={{ '--nav-accent': '#0d9488' } as React.CSSProperties}
+                onClick={() => setIsUserMgmtModalOpen(true)}
+              >
+                <UserCog className="w-4 h-4 flex-shrink-0 text-teal-600" />
+                <span>Manage Users & Roles</span>
+              </div>
+            </>
+          )}
+
           {/* Specialty Clinics Section */}
           <div className="nav-section-label">Clinical Programs</div>
           {DEPARTMENTS.filter(d => d.code !== 'anes').map(dept => {
             const isActive = currentModule === dept.code;
             const itemColor = dept.color || '#0f766e';
+            const isUserDept = currentUser?.department_code?.toLowerCase() === dept.code.toLowerCase();
+
             return (
               <div 
                 key={dept.code}
@@ -157,7 +191,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
                 onClick={() => handleNavClick(dept.code)}
               >
                 {getDeptIcon(dept.code, itemColor)}
-                <span className="truncate">{dept.label}</span>
+                <span className="truncate flex-1">{dept.label}</span>
+                {isUserDept && (
+                  <span className="text-[10px] bg-teal-50 text-teal-700 font-bold px-1.5 py-0.5 rounded border border-teal-200">
+                    My Dept
+                  </span>
+                )}
               </div>
             );
           })}
@@ -166,25 +205,60 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
         {/* User Profile Footer */}
         {currentUser && (
           <div className="user-profile">
-            <div className="user-avatar">
-              {getInitials(currentUser)}
+            <div className="user-avatar" title={currentUser.name}>
+              {getInitials(currentUser.name)}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="user-name truncate" title={currentUser}>
-                {currentUser}
+              <div className="user-name truncate flex items-center gap-1" title={currentUser.name}>
+                <span>{currentUser.name}</span>
+                {isAdmin && <ShieldCheck className="w-3.5 h-3.5 text-purple-600 shrink-0" />}
               </div>
-              <div className="text-[11px] text-slate-400">Coordinator Session</div>
+              <div className="text-[11px] text-slate-400 truncate">
+                {isAdmin ? (
+                  <span className="text-purple-600 font-medium">Administrator</span>
+                ) : currentUser.department_code ? (
+                  <span className="text-teal-600 font-medium">{getDeptLabel(currentUser.department_code)}</span>
+                ) : (
+                  <span>Coordinator</span>
+                )}
+              </div>
             </div>
-            <button 
-              onClick={logout}
-              className="sidebar-logout-pill"
-              title="Sign Out"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-            </button>
+
+            {/* User Action Controls */}
+            <div className="flex items-center gap-1">
+              <button 
+                onClick={() => setIsPasswordModalOpen(true)}
+                className="sidebar-logout-pill"
+                title="Change Password"
+              >
+                <KeyRound className="w-3.5 h-3.5 text-slate-500" />
+              </button>
+
+              <button 
+                onClick={logout}
+                className="sidebar-logout-pill"
+                title="Sign Out"
+              >
+                <LogOut className="w-3.5 h-3.5 text-red-500" />
+              </button>
+            </div>
           </div>
         )}
       </nav>
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal 
+        isOpen={isPasswordModalOpen} 
+        onClose={() => setIsPasswordModalOpen(false)} 
+      />
+
+      {/* Admin User Management Modal */}
+      {isAdmin && (
+        <UserManagementModal 
+          isOpen={isUserMgmtModalOpen} 
+          onClose={() => setIsUserMgmtModalOpen(false)} 
+        />
+      )}
     </>
   );
 };

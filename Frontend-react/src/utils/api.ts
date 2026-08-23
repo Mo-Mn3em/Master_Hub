@@ -1,4 +1,4 @@
-import type { Patient } from '../types';
+import type { Patient, UserAccount } from '../types';
 import { patientToApi, caseFromApi, type BackendCase } from './apiMapper';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
@@ -20,7 +20,7 @@ function authHeaders(): Record<string, string> {
 }
 
 // ── Auth API ──────────────────────────────────────────────────────────────────
-export async function loginApi(username: string, password: string): Promise<{ id: number; name: string }> {
+export async function loginApi(username: string, password: string): Promise<UserAccount> {
   const response = await fetch(`${API_BASE}/login`, {
     method: 'POST',
     headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
@@ -35,6 +35,100 @@ export async function loginApi(username: string, password: string): Promise<{ id
   const data = await response.json();
   setToken(data.token);
   return data.user;
+}
+
+export async function changePasswordApi(
+  currentPassword: string,
+  newPassword: string,
+  newPasswordConfirmation: string
+): Promise<{ status: string; message: string }> {
+  const response = await fetch(`${API_BASE}/user/change-password`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      current_password: currentPassword,
+      new_password: newPassword,
+      new_password_confirmation: newPasswordConfirmation,
+    }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.message || data.errors?.current_password?.[0] || 'Failed to change password.');
+  }
+
+  return data;
+}
+
+export async function fetchUsersApi(): Promise<UserAccount[]> {
+  const response = await fetch(`${API_BASE}/users`, {
+    headers: authHeaders(),
+  });
+
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    throw new Error(errData.message || 'Failed to fetch users.');
+  }
+
+  const data = await response.json();
+  return data.data || [];
+}
+
+export async function createUserApi(payload: {
+  name: string;
+  email: string;
+  password: string;
+  role: 'admin' | 'user';
+  department_code?: string | null;
+}): Promise<UserAccount> {
+  const response = await fetch(`${API_BASE}/users`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.message || 'Failed to create user.');
+  }
+
+  return data.data;
+}
+
+export async function updateUserApi(
+  id: number,
+  payload: {
+    name?: string;
+    email?: string;
+    password?: string;
+    role?: 'admin' | 'user';
+    department_code?: string | null;
+  }
+): Promise<UserAccount> {
+  const response = await fetch(`${API_BASE}/users/${id}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.message || 'Failed to update user.');
+  }
+
+  return data.data;
+}
+
+export async function deleteUserApi(id: number): Promise<void> {
+  const response = await fetch(`${API_BASE}/users/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    throw new Error(errData.message || 'Failed to delete user.');
+  }
 }
 
 export async function logoutApi(): Promise<void> {

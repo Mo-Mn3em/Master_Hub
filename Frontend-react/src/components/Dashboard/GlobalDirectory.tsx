@@ -615,7 +615,7 @@ export const GlobalDirectory: React.FC = () => {
                 )}
 
                 <div className="card-footer">
-                  Last Update: {new Date(patient.updatedAt || '').toLocaleDateString()} by {patient.updatedBy || currentUser || 'Admin'}
+                  Last Update: {new Date(patient.updatedAt || '').toLocaleDateString()} by {patient.updatedBy || currentUser?.name || 'Admin'}
                 </div>
               </div>
             );

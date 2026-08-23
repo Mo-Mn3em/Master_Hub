@@ -23,7 +23,8 @@ import {
   Plus,
   Building2,
   Stethoscope,
-  FileText
+  FileText,
+  Lock
 } from 'lucide-react';
 import { verifyPatientNileApi } from '../../utils/api';
 
@@ -223,7 +224,10 @@ export const PatientForm: React.FC = () => {
     patients, 
     savePatient, 
     archivePatient,
-    researchTemplates
+    researchTemplates,
+    currentUser,
+    isAdmin,
+    canEditDepartment
   } = useApp();
 
   const isNew = editingPatientId === 'new';
@@ -2264,6 +2268,7 @@ export const PatientForm: React.FC = () => {
 
             const pfx = dept.pfx || dept.code;
             const autoBlockers = getAutoBlockers(localPatient as Patient, dept);
+            const canEdit = canEditDepartment(dept.code);
 
             return (
               <div 
@@ -2276,7 +2281,14 @@ export const PatientForm: React.FC = () => {
                   style={{ backgroundColor: dept.color }}
                   onClick={() => setActiveAccordion(activeAccordion === dept.code ? '' : dept.code)}
                 >
-                  <span>{dept.label} Operations Panel</span>
+                  <span className="flex items-center gap-2">
+                    <span>{dept.label} Operations Panel</span>
+                    {!canEdit && (
+                      <span className="text-[11px] px-2 py-0.5 rounded bg-black/20 text-white font-medium flex items-center gap-1">
+                        <Lock className="w-3 h-3" /> Read-Only
+                      </span>
+                    )}
+                  </span>
                   {activeAccordion === dept.code ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </div>
 
@@ -2284,121 +2296,146 @@ export const PatientForm: React.FC = () => {
                   className="program-block-content"
                   style={{ display: activeAccordion === dept.code ? 'block' : 'none' }}
                 >
-                    {/* Department Enrollment Action Bar */}
-                    <div style={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      alignItems: 'center', 
-                      marginBottom: 20, 
-                      padding: '10px 16px', 
-                      background: 'var(--surface-sunken)', 
-                      borderRadius: 10, 
-                      border: '1px solid var(--border)',
-                      flexWrap: 'wrap',
-                      gap: 10
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-primary)' }}>Status:</span>
-                        {isEnrolled ? (
-                          <span style={{ padding: '3px 10px', borderRadius: 6, background: '#dcfce7', color: '#15803d', fontSize: '0.82rem', fontWeight: 700 }}>
-                            Enrolled in {dept.label} (Active Roster)
-                          </span>
-                        ) : (
-                          <span style={{ padding: '3px 10px', borderRadius: 6, background: '#f1f5f9', color: '#475569', fontSize: '0.82rem', fontWeight: 700, border: '1px solid #cbd5e1' }}>
-                            Inactive / Not on Active Clinic List
-                          </span>
+                    {/* Read-Only Mode Banner */}
+                    {!canEdit && (
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        padding: '10px 14px',
+                        marginBottom: 16,
+                        background: '#f8fafc',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: 10,
+                        color: '#475569',
+                        fontSize: '0.82rem'
+                      }}>
+                        <Lock className="w-4 h-4 text-slate-400 shrink-0" />
+                        <span>
+                          <strong>Read-Only View:</strong> You have viewing access for this department. Edits are restricted to staff assigned to <strong>{dept.label}</strong>.
+                        </span>
+                      </div>
+                    )}
+
+                    <fieldset disabled={!canEdit} style={{ border: 'none', margin: 0, padding: 0 }}>
+                      {/* Department Enrollment Action Bar */}
+                      <div style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center', 
+                        marginBottom: 20, 
+                        padding: '10px 16px', 
+                        background: 'var(--surface-sunken)', 
+                        borderRadius: 10, 
+                        border: '1px solid var(--border)',
+                        flexWrap: 'wrap',
+                        gap: 10
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-primary)' }}>Status:</span>
+                          {isEnrolled ? (
+                            <span style={{ padding: '3px 10px', borderRadius: 6, background: '#dcfce7', color: '#15803d', fontSize: '0.82rem', fontWeight: 700 }}>
+                              Enrolled in {dept.label} (Active Roster)
+                            </span>
+                          ) : (
+                            <span style={{ padding: '3px 10px', borderRadius: 6, background: '#f1f5f9', color: '#475569', fontSize: '0.82rem', fontWeight: 700, border: '1px solid #cbd5e1' }}>
+                              Inactive / Not on Active Clinic List
+                            </span>
+                          )}
+                        </div>
+                        {canEdit && (
+                          isEnrolled ? (
+                            <button
+                              type="button"
+                              className="btn btn-secondary btn-sm"
+                              style={{ background: '#fee2e2', borderColor: '#fca5a5', color: '#b91c1c', fontSize: '0.82rem', fontWeight: 600, padding: '6px 12px' }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (window.confirm(`Remove this patient from ${dept.label}'s active queue?\n\nAll clinical data and notes will remain saved and editable, but the case will no longer appear on ${dept.label}'s active patient roster.`)) {
+                                  handleEnrollmentToggle(dept.code, false);
+                                }
+                              }}
+                            >
+                              ✕ Remove from {dept.label} Active Queue
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="btn btn-primary btn-sm"
+                              style={{ fontSize: '0.82rem', fontWeight: 600, padding: '6px 12px' }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEnrollmentToggle(dept.code, true);
+                              }}
+                            >
+                              + Add to {dept.label} Active Queue
+                            </button>
+                          )
                         )}
                       </div>
-                      {isEnrolled ? (
-                        <button
-                          type="button"
-                          className="btn btn-secondary btn-sm"
-                          style={{ background: '#fee2e2', borderColor: '#fca5a5', color: '#b91c1c', fontSize: '0.82rem', fontWeight: 600, padding: '6px 12px' }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (window.confirm(`Remove this patient from ${dept.label}'s active queue?\n\nAll clinical data and notes will remain saved and editable, but the case will no longer appear on ${dept.label}'s active patient roster.`)) {
-                              handleEnrollmentToggle(dept.code, false);
-                            }
-                          }}
-                        >
-                          ✕ Remove from {dept.label} Active Queue
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          className="btn btn-primary btn-sm"
-                          style={{ fontSize: '0.82rem', fontWeight: 600, padding: '6px 12px' }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEnrollmentToggle(dept.code, true);
-                          }}
-                        >
-                          + Add to {dept.label} Active Queue
-                        </button>
-                      )}
-                    </div>
 
-                    {/* Custom HTML Form Injected from departmentsData */}
-                    {dept.customForm && (
-                      <div 
-                        dangerouslySetInnerHTML={{ __html: dept.customForm }} 
-                        style={{ marginBottom: 20 }}
-                      />
-                    )}
-
-                    {/* Standard Department Alarms */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
-                      <h4 style={{ fontSize: 13, color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)', paddingBottom: 6 }}>
-                        Coordinator Action Alarms
-                      </h4>
-                      {renderAlarmBlock(`${pfx}OpReq`, 'Decision for Surgery / Booking', dept.code)}
-                      {renderAlarmBlock(`${pfx}Follow`, 'Follow-up Task Reminder', dept.code)}
-                      {dept.code === 'sbif' && renderAlarmBlock('sbifNeuro', 'Neuro-Urology Clinic Alarm', dept.code)}
-                      {dept.code === 'livt' && renderAlarmBlock('livtPrep', 'Pre-transplant Prep Alarm', dept.code)}
-                    </div>
-
-                    {/* Checklist Gates Section */}
-                    {dept.customGates && (
-                      <div className="gate-block">
-                        <h5>Clinical Gatekeeper Checklist</h5>
+                      {/* Custom HTML Form Injected from departmentsData */}
+                      {dept.customForm && (
                         <div 
-                          className="gate-grid"
-                          dangerouslySetInnerHTML={{ __html: dept.customGates }}
+                          dangerouslySetInnerHTML={{ __html: dept.customForm }} 
+                          style={{ marginBottom: 20 }}
                         />
-                      </div>
-                    )}
-
-                    {/* Active Blockers Live View */}
-                    <div style={{
-                      marginTop: 20,
-                      padding: 16,
-                      borderRadius: 8,
-                      background: autoBlockers.length > 0 ? '#fef2f2' : '#f0fdf4',
-                      border: autoBlockers.length > 0 ? '1px solid #fca5a5' : '1px solid #bbf7d0',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 12
-                    }}>
-                      {autoBlockers.length > 0 ? (
-                        <>
-                          <AlertTriangle className="w-5 h-5 text-red-600" />
-                          <div>
-                            <div style={{ fontWeight: 700, color: '#991b1b', fontSize: 13 }}>Live Blocker Warnings ({autoBlockers.length})</div>
-                            <div style={{ color: '#b91c1c', fontSize: 12, marginTop: 4 }}>
-                              {autoBlockers.map((b, i) => <div key={i}>• {b}</div>)}
-                            </div>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle className="w-5 h-5 text-green-600" />
-                          <div>
-                            <div style={{ fontWeight: 700, color: '#166534', fontSize: 13 }}>All Gatekeeper Checks Clear</div>
-                            <div style={{ color: '#15803d', fontSize: 12, marginTop: 2 }}>This patient meets all clinical criteria to proceed to surgery.</div>
-                          </div>
-                        </>
                       )}
-                    </div>
+
+                      {/* Standard Department Alarms */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
+                        <h4 style={{ fontSize: 13, color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)', paddingBottom: 6 }}>
+                          Coordinator Action Alarms
+                        </h4>
+                        {renderAlarmBlock(`${pfx}OpReq`, 'Decision for Surgery / Booking', dept.code)}
+                        {renderAlarmBlock(`${pfx}Follow`, 'Follow-up Task Reminder', dept.code)}
+                        {dept.code === 'sbif' && renderAlarmBlock('sbifNeuro', 'Neuro-Urology Clinic Alarm', dept.code)}
+                        {dept.code === 'livt' && renderAlarmBlock('livtPrep', 'Pre-transplant Prep Alarm', dept.code)}
+                      </div>
+
+                      {/* Checklist Gates Section */}
+                      {dept.customGates && (
+                        <div className="gate-block">
+                          <h5>Clinical Gatekeeper Checklist</h5>
+                          <div 
+                            className="gate-grid"
+                            dangerouslySetInnerHTML={{ __html: dept.customGates }}
+                          />
+                        </div>
+                      )}
+
+                      {/* Active Blockers Live View */}
+                      <div style={{
+                        marginTop: 20,
+                        padding: 16,
+                        borderRadius: 8,
+                        background: autoBlockers.length > 0 ? '#fef2f2' : '#f0fdf4',
+                        border: autoBlockers.length > 0 ? '1px solid #fca5a5' : '1px solid #bbf7d0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 12
+                      }}>
+                        {autoBlockers.length > 0 ? (
+                          <>
+                            <AlertTriangle className="w-5 h-5 text-red-600" />
+                            <div>
+                              <div style={{ fontWeight: 700, color: '#991b1b', fontSize: 13 }}>Live Blocker Warnings ({autoBlockers.length})</div>
+                              <div style={{ color: '#b91c1c', fontSize: 12, marginTop: 4 }}>
+                                {autoBlockers.map((b, i) => <div key={i}>• {b}</div>)}
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="w-5 h-5 text-green-600" />
+                            <div>
+                              <div style={{ fontWeight: 700, color: '#166534', fontSize: 13 }}>All Gatekeeper Checks Clear</div>
+                              <div style={{ color: '#15803d', fontSize: 12, marginTop: 2 }}>This patient meets all clinical criteria to proceed to surgery.</div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </fieldset>
 
                 </div>
               </div>
@@ -2408,207 +2445,239 @@ export const PatientForm: React.FC = () => {
           {/* ============================================================== */}
           {/* 3. Anesthesia Program Accordion (Fit/Unfit, blood requirements) */}
           {/* ============================================================== */}
-          {enrolledClinics.anes && (
-            <div 
-              className={`program-block ${activeAccordion === 'anes' ? 'active' : ''}`}
-              id="block_anes"
-            >
+          {enrolledClinics.anes && (() => {
+            const canEditAnes = canEditDepartment('anes');
+            return (
               <div 
-                className="program-block-header" 
-                style={{ backgroundColor: 'var(--color-anes)' }}
-                onClick={() => setActiveAccordion(activeAccordion === 'anes' ? '' : 'anes')}
+                className={`program-block ${activeAccordion === 'anes' ? 'active' : ''}`}
+                id="block_anes"
               >
-                <span>Anesthesia Pre-op Fitness Panel</span>
-                {activeAccordion === 'anes' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-              </div>
+                <div 
+                  className="program-block-header" 
+                  style={{ backgroundColor: 'var(--color-anes)' }}
+                  onClick={() => setActiveAccordion(activeAccordion === 'anes' ? '' : 'anes')}
+                >
+                  <span className="flex items-center gap-2">
+                    <span>Anesthesia Pre-op Fitness Panel</span>
+                    {!canEditAnes && (
+                      <span className="text-[11px] px-2 py-0.5 rounded bg-black/20 text-white font-medium flex items-center gap-1">
+                        <Lock className="w-3 h-3" /> Read-Only
+                      </span>
+                    )}
+                  </span>
+                  {activeAccordion === 'anes' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </div>
 
-              <div 
-                className="program-block-content"
-                style={{ display: activeAccordion === 'anes' ? 'block' : 'none' }}
-              >
-                  <div className="form-group">
-                    <label>Requested Operation / Surgical Procedure</label>
-                    <input 
-                      type="text" 
-                      id="anes_reqOpName"
-                      placeholder="Type operation name or append below..."
-                      value={localPatient.programs?.anes?.reqOpName || ''}
-                      onChange={handleFormChange}
-                    />
-                  </div>
+                <div 
+                  className="program-block-content"
+                  style={{ display: activeAccordion === 'anes' ? 'block' : 'none' }}
+                >
+                  {!canEditAnes && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      padding: '10px 14px',
+                      marginBottom: 16,
+                      background: '#f8fafc',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: 10,
+                      color: '#475569',
+                      fontSize: '0.82rem'
+                    }}>
+                      <Lock className="w-4 h-4 text-slate-400 shrink-0" />
+                      <span>
+                        <strong>Read-Only View:</strong> You have viewing access for Pre-Anesthesia records. Edits are restricted to Anesthesia staff.
+                      </span>
+                    </div>
+                  )}
 
-                  <div className="form-grid three">
+                  <fieldset disabled={!canEditAnes} style={{ border: 'none', margin: 0, padding: 0 }}>
                     <div className="form-group">
-                      <label>Anesthesia Fitness Status</label>
-                      <select 
-                        id="anes_assessmentStatus"
-                        value={localPatient.programs?.anes?.assessmentStatus || 'pending'}
-                        onChange={handleFormChange}
-                      >
-                        <option value="pending">Pending Review</option>
-                        <option value="fit">Fit for Surgery</option>
-                        <option value="unfit">Unfit (Rejected)</option>
-                        <option value="postponed">Postponed</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Fitness Decision Date</label>
-                      <input 
-                        type="date" 
-                        id="anes_assessmentDate"
-                        value={localPatient.programs?.anes?.assessmentDate || ''}
-                        onChange={handleFormChange}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Signed Informed Consent</label>
-                      <select 
-                        id="anes_consentSigned"
-                        value={localPatient.programs?.anes?.consentSigned || 'pending'}
-                        onChange={handleFormChange}
-                      >
-                        <option value="pending">Awaiting / Missing</option>
-                        <option value="done">Done / Signed</option>
-                        <option value="refused">Patient Refused</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {localPatient.programs?.anes?.assessmentStatus === 'unfit' && (
-                    <div className="form-group" style={{ padding: 12, background: '#fef2f2', borderLeft: '3px solid var(--danger)', borderRadius: 6 }}>
-                      <label style={{ color: 'var(--danger)' }}>Clinical Cause for Rejection (Unfit Reason) *</label>
+                      <label>Requested Operation / Surgical Procedure</label>
                       <input 
                         type="text" 
-                        id="anes_unfitReason" 
-                        placeholder="e.g. Severe chest infection, high cardiac risks..."
-                        value={localPatient.programs?.anes?.unfitReason || ''}
+                        id="anes_reqOpName"
+                        placeholder="Type operation name or append below..."
+                        value={localPatient.programs?.anes?.reqOpName || ''}
                         onChange={handleFormChange}
-                        required
                       />
                     </div>
-                  )}
 
-                  {localPatient.programs?.anes?.assessmentStatus === 'fit' && (
-                    <div className="form-group" style={{ gridColumn: '1 / -1', marginTop: '1rem' }}>
-                      <button 
-                        type="button" 
-                        className="btn btn-primary" 
-                        onClick={transferToSurgicalList}
-                        style={{ width: '100%', background: '#27AE60', borderColor: '#27AE60', fontSize: '1rem', padding: '0.75rem' }}
-                      >
-                        ✅ Confirm Fitness & Transfer to Surgical List
-                      </button>
+                    <div className="form-grid three">
+                      <div className="form-group">
+                        <label>Anesthesia Fitness Status</label>
+                        <select 
+                          id="anes_assessmentStatus"
+                          value={localPatient.programs?.anes?.assessmentStatus || 'pending'}
+                          onChange={handleFormChange}
+                        >
+                          <option value="pending">Pending Review</option>
+                          <option value="fit">Fit for Surgery</option>
+                          <option value="unfit">Unfit (Rejected)</option>
+                          <option value="postponed">Postponed</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>Fitness Decision Date</label>
+                        <input 
+                          type="date" 
+                          id="anes_assessmentDate"
+                          value={localPatient.programs?.anes?.assessmentDate || ''}
+                          onChange={handleFormChange}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Signed Informed Consent</label>
+                        <select 
+                          id="anes_consentSigned"
+                          value={localPatient.programs?.anes?.consentSigned || 'pending'}
+                          onChange={handleFormChange}
+                        >
+                          <option value="pending">Awaiting / Missing</option>
+                          <option value="done">Done / Signed</option>
+                          <option value="refused">Patient Refused</option>
+                        </select>
+                      </div>
                     </div>
-                  )}
 
-                  {localPatient.programs?.anes?.assessmentStatus === 'unfit' && (
-                    <div className="form-group" style={{ gridColumn: '1 / -1', marginTop: '0.5rem' }}>
-                      <button 
-                        type="button" 
-                        className="btn btn-danger" 
-                        onClick={rejectFromAnesthesia}
-                        style={{ width: '100%', fontSize: '1rem', padding: '0.75rem' }}
-                      >
-                        ❌ Reject & Return Patient to Surgeon
-                      </button>
-                    </div>
-                  )}
+                    {localPatient.programs?.anes?.assessmentStatus === 'unfit' && (
+                      <div className="form-group" style={{ padding: 12, background: '#fef2f2', borderLeft: '3px solid var(--danger)', borderRadius: 6 }}>
+                        <label style={{ color: 'var(--danger)' }}>Clinical Cause for Rejection (Unfit Reason) *</label>
+                        <input 
+                          type="text" 
+                          id="anes_unfitReason" 
+                          placeholder="e.g. Severe chest infection, high cardiac risks..."
+                          value={localPatient.programs?.anes?.unfitReason || ''}
+                          onChange={handleFormChange}
+                          required
+                        />
+                      </div>
+                    )}
 
-                  <div className="form-grid three">
-                    <div className="form-group">
-                      <label>Labs Assessment</label>
-                      <select 
-                        id="anes_labsOk"
-                        value={localPatient.programs?.anes?.labsOk || 'pending'}
-                        onChange={handleFormChange}
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="done">Normal / Ok</option>
-                        <option value="abnormal">Abnormal (Review required)</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Cardiac Clearance</label>
-                      <select 
-                        id="anes_cardiacClear"
-                        value={localPatient.programs?.anes?.cardiacClear || 'pending'}
-                        onChange={handleFormChange}
-                      >
-                        <option value="pending">Pending Clear</option>
-                        <option value="done">Cleared / Normal</option>
-                        <option value="not_needed">Not needed</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Post-Op Destination</label>
-                      <select 
-                        id="anes_postDest"
-                        value={localPatient.programs?.anes?.postDest || 'pending'}
-                        onChange={handleFormChange}
-                      >
-                        <option value="pending">Pending Choice</option>
-                        <option value="ward">Ward</option>
-                        <option value="picu">PICU / ICU</option>
-                        <option value="day_case">Day Case (Outpatient)</option>
-                      </select>
-                    </div>
-                  </div>
+                    {localPatient.programs?.anes?.assessmentStatus === 'fit' && canEditAnes && (
+                      <div className="form-group" style={{ gridColumn: '1 / -1', marginTop: '1rem' }}>
+                        <button 
+                          type="button" 
+                          className="btn btn-primary" 
+                          onClick={transferToSurgicalList}
+                          style={{ width: '100%', background: '#27AE60', borderColor: '#27AE60', fontSize: '1rem', padding: '0.75rem' }}
+                        >
+                          ✅ Confirm Fitness & Transfer to Surgical List
+                        </button>
+                      </div>
+                    )}
 
-                  {/* Blood bank crossmatch requirements */}
-                  <div className="gate-block" style={{ background: '#f1f5f9' }}>
-                    <h5 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span>🩸 Blood Bank Crossmatch Status</span>
-                      <select 
-                        id="anes_overallBloodReady" 
-                        style={{ width: 'auto', padding: '4px 28px 4px 10px', fontSize: 12 }}
-                        value={localPatient.programs?.anes?.overallBloodReady || 'pending'}
-                        onChange={handleFormChange}
-                      >
-                        <option value="not_needed">Not Needed</option>
-                        <option value="pending">Pending Crossmatch</option>
-                        <option value="ready">Physically Ready</option>
-                      </select>
-                    </h5>
-                    
-                    <div className="form-grid" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
-                      {['rbc', 'ffp', 'cryo', 'fwb', 'plt'].map(bloodType => {
-                        const units = localPatient.programs?.anes?.[`${bloodType}Units`] || '';
-                        const status = localPatient.programs?.anes?.[`${bloodType}Status`] || 'not_needed';
-                        return (
-                          <div key={bloodType} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                            <label style={{ fontSize: 10 }}>{bloodType.toUpperCase()}</label>
-                            <input 
-                              type="number" 
-                              id={`anes_${bloodType}Units`} 
-                              placeholder="Units" 
-                              style={{ padding: 6, fontSize: 12 }}
-                              value={units}
-                              onChange={handleFormChange}
-                            />
-                            <select 
-                              id={`anes_${bloodType}Status`} 
-                              style={{ padding: 6, fontSize: 11 }}
-                              value={status}
-                              onChange={handleFormChange}
-                            >
-                              <option value="not_needed">None</option>
-                              <option value="pending">Pending</option>
-                              <option value="crossmatched">Crossmatched</option>
-                              <option value="ready">Ready</option>
-                            </select>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+                    {localPatient.programs?.anes?.assessmentStatus === 'unfit' && canEditAnes && (
+                      <div className="form-group" style={{ gridColumn: '1 / -1', marginTop: '0.5rem' }}>
+                        <button 
+                          type="button" 
+                          className="btn btn-danger" 
+                          onClick={rejectFromAnesthesia}
+                          style={{ width: '100%', fontSize: '1rem', padding: '0.75rem' }}
+                        >
+                          ❌ Reject & Return Patient to Surgeon
+                        </button>
+                      </div>
+                    )}
 
-                  {/* Anesthesia Followup Alarm */}
-                  <div style={{ marginTop: 20 }}>
-                    {renderAlarmBlock('anesPreop', 'Anesthesia Fitness / Pre-op Followup', 'anes')}
-                  </div>
+                    <div className="form-grid three">
+                      <div className="form-group">
+                        <label>Labs Assessment</label>
+                        <select 
+                          id="anes_labsOk"
+                          value={localPatient.programs?.anes?.labsOk || 'pending'}
+                          onChange={handleFormChange}
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="done">Normal / Ok</option>
+                          <option value="abnormal">Abnormal (Review required)</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>Cardiology Assessment</label>
+                        <select 
+                          id="anes_cardioOk"
+                          value={localPatient.programs?.anes?.cardioOk || 'pending'}
+                          onChange={handleFormChange}
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="done">Fit / Cleared</option>
+                          <option value="not_needed">Not Required</option>
+                          <option value="abnormal">Cardiac High Risk</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>Post-op ICU / Ward Care Plan</label>
+                        <select 
+                          id="anes_postCare"
+                          value={localPatient.programs?.anes?.postCare || 'ward'}
+                          onChange={handleFormChange}
+                        >
+                          <option value="ward">Ward</option>
+                          <option value="picu">PICU / ICU</option>
+                          <option value="day_case">Day Case (Outpatient)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Blood bank crossmatch requirements */}
+                    <div className="gate-block" style={{ background: '#f1f5f9' }}>
+                      <h5 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span>🩸 Blood Bank Crossmatch Status</span>
+                        <select 
+                          id="anes_overallBloodReady" 
+                          style={{ width: 'auto', padding: '4px 28px 4px 10px', fontSize: 12 }}
+                          value={localPatient.programs?.anes?.overallBloodReady || 'pending'}
+                          onChange={handleFormChange}
+                        >
+                          <option value="not_needed">Not Needed</option>
+                          <option value="pending">Pending Crossmatch</option>
+                          <option value="ready">Physically Ready</option>
+                        </select>
+                      </h5>
+                      
+                      <div className="form-grid" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
+                        {['rbc', 'ffp', 'cryo', 'fwb', 'plt'].map(bloodType => {
+                          const units = localPatient.programs?.anes?.[`${bloodType}Units`] || '';
+                          const status = localPatient.programs?.anes?.[`${bloodType}Status`] || 'not_needed';
+                          return (
+                            <div key={bloodType} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                              <label style={{ fontSize: 10 }}>{bloodType.toUpperCase()}</label>
+                              <input 
+                                type="number" 
+                                id={`anes_${bloodType}Units`} 
+                                placeholder="Units" 
+                                style={{ padding: 6, fontSize: 12 }}
+                                value={units}
+                                onChange={handleFormChange}
+                              />
+                              <select 
+                                id={`anes_${bloodType}Status`} 
+                                style={{ padding: 6, fontSize: 11 }}
+                                value={status}
+                                onChange={handleFormChange}
+                              >
+                                <option value="not_needed">None</option>
+                                <option value="pending">Pending</option>
+                                <option value="crossmatched">Crossmatched</option>
+                                <option value="ready">Ready</option>
+                              </select>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Anesthesia Followup Alarm */}
+                    <div style={{ marginTop: 20 }}>
+                      {renderAlarmBlock('anesPreop', 'Anesthesia Fitness / Pre-op Followup', 'anes')}
+                    </div>
+                  </fieldset>
                 </div>
               </div>
-            )}
+            );
+          })()}
 
           {/* ============================================================== */}
           {/* 4. Surgery Booking Accordion (Schedules, urgency) */}

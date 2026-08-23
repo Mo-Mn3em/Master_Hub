@@ -5,11 +5,18 @@ use App\Models\Cases;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CasesController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\UserController;
 use App\Http\Controllers\NileVerificationController;
 
 // ── Auth Routes (public) ──────────────────────────────────────────────────────
 Route::post('login',  [AuthController::class, 'login']);
 Route::post('logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
+
+// ── Password Management (authenticated) ───────────────────────────────────────
+Route::post('user/change-password', [AuthController::class, 'changePassword'])->middleware('auth:sanctum');
+
+// ── Admin User Management ─────────────────────────────────────────────────────
+Route::apiResource('users', UserController::class)->middleware('auth:sanctum');
 
 // ── Nile Patient Verification Route ──────────────────────────────────────────
 Route::post('nile/verify-patient', [NileVerificationController::class, 'verify']);
@@ -25,4 +32,5 @@ Route::post('case/bulkStore', [CasesController::class, 'bulkStore']);
 
 // Standard CRUD routes (index, store, show, update, destroy)
 Route::apiResource('case', CasesController::class);
+
 

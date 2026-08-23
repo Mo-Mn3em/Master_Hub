@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import type { Patient, ResearchTemplate, ClinicalLog } from '../types';
+import type { Patient, ResearchTemplate, ClinicalLog, UserAccount } from '../types';
 import { fetchCasesApi, createCaseApi, updateCaseApi, deleteCaseApi, loginApi, logoutApi } from '../utils/api';
 import { isPatientStalled } from '../utils/clinicalRules';
 
@@ -7,7 +7,9 @@ interface AppContextType {
   patients: Patient[];
   researchTemplates: { [id: string]: ResearchTemplate };
   currentModule: string;
-  currentUser: string | null;
+  currentUser: UserAccount | null;
+  isAdmin: boolean;
+  canEditDepartment: (deptCode?: string) => boolean;
   editingPatientId: string | null;
   currentPage: number;
   itemsPerPage: number;
@@ -70,7 +72,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [patients, setPatients] = useState<Patient[]>([]);
   const [researchTemplates, setResearchTemplates] = useState<{ [id: string]: ResearchTemplate }>({});
   const [currentModule, setCurrentModule] = useState<string>('hub');
-  const [currentUser, setCurrentUser] = useState<string | null>(() => localStorage.getItem('master_hub_user'));
+  const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => {
+    try {
+      const stored = localStorage.getItem('master_hub_user_account');
+      if (stored) return JSON.parse(stored);
+      const name = localStorage.getItem('master_hub_user');
+      if (name) {
+        return {
+          id: 1,
+          name,
+          email: `${name}@masterhub.local`,
+          role: name.toLowerCase() === 'admin' ? 'admin' : 'user',
+          department_code: null,
+        };
+      }
+    } catch (e) {}
+    return null;
+  });
   const [editingPatientId, setEditingPatientId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage] = useState<number>(15);
@@ -82,6 +100,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isOnline, setIsOnline] = useState<boolean>(false);
   const [isFormDirty, setIsFormDirty] = useState<boolean>(false);
+
+  // Permission helpers
+  const isAdmin = currentUser?.role === 'admin';
+
+  const canEditDepartment = (deptCode?: string): boolean => {
+    if (isAdmin) return true;
+    if (!deptCode) return true; // General patient demographic section
+    if (!currentUser?.department_code) return false;
+    return currentUser.department_code.toLowerCase() === deptCode.toLowerCase();
+  };
 
   // Global unsaved changes browser tab protection
   useEffect(() => {
@@ -203,6 +231,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (expiresAt && Date.now() >= expiresAt) {
       setCurrentUser(null);
       localStorage.removeItem('master_hub_user');
+      localStorage.removeItem('master_hub_user_account');
       localStorage.removeItem('master_hub_token');
       localStorage.removeItem('master_hub_expires_at');
     }
@@ -253,7 +282,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newLog: ClinicalLog = {
       id: `log_${Date.now()}`,
       timestamp: new Date().toISOString(),
-      user: currentUser || 'Guest (Dev)',
+      user: currentUser?.name || 'Guest (Dev)',
       action,
       details
     };
@@ -264,9 +293,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const login = async (username: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
       const user = await loginApi(username, password);
-      setCurrentUser(user.name);
+      setCurrentUser(user);
+      localStorage.setItem('master_hub_user_account', JSON.stringify(user));
       localStorage.setItem('master_hub_user', user.name);
-      logAction('LOGIN', `User logged in: ${user.name}`);
+      logAction('LOGIN', `User logged in: ${user.name} (${user.role}${user.department_code ? ` - ${user.department_code}` : ''})`);
       return { success: true };
     } catch (e: any) {
       return { success: false, error: e.message || 'Login failed.' };
@@ -276,6 +306,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const logout = () => {
     logoutApi();
     setCurrentUser(null);
+    localStorage.removeItem('master_hub_user_account');
     localStorage.removeItem('master_hub_user');
     logAction('LOGOUT', 'User logged out.');
   };
@@ -330,7 +361,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setIsOnline(false);
 
       const now = new Date().toISOString();
-      const updater = currentUser || 'System';
+      const updater = currentUser?.name || 'System';
       let fallbackRecord: Patient;
 
       if (patientData.id) {
@@ -400,6 +431,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         researchTemplates,
         currentModule,
         currentUser,
+        isAdmin,
+        canEditDepartment,
         editingPatientId,
         currentPage,
         itemsPerPage,
