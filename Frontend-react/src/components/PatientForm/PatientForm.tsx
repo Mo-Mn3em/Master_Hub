@@ -1870,15 +1870,6 @@ export const PatientForm: React.FC = () => {
                         {verifyingNile ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
                         <span>{verifyingNile ? 'Verifying with Nile...' : 'Verify Patient'}</span>
                       </button>
-                      {nileRawResponse && (
-                        <button
-                          type="button"
-                          onClick={() => setShowNileRaw(!showNileRaw)}
-                          className="btn btn-secondary btn-sm"
-                        >
-                          {showNileRaw ? 'Hide API Payload' : 'Show API Payload'}
-                        </button>
-                      )}
                     </div>
 
                     {nileVerificationStatus && (
@@ -1903,22 +1894,6 @@ export const PatientForm: React.FC = () => {
                       </div>
                     )}
                   </div>
-
-                  {showNileRaw && nileRawResponse && (
-                    <div style={{
-                      padding: 14,
-                      background: '#0f172a',
-                      color: '#4ade80',
-                      fontFamily: 'var(--font-mono, monospace)',
-                      fontSize: '0.80rem',
-                      borderRadius: 10,
-                      overflowX: 'auto',
-                      maxHeight: 240
-                    }}>
-                      <div style={{ color: '#94a3b8', fontSize: '0.75rem', marginBottom: 6 }}>// Nile API Raw Response</div>
-                      <pre style={{ margin: 0 }}>{JSON.stringify(nileRawResponse, null, 2)}</pre>
-                    </div>
-                  )}
                 </div>
 
                 <div className="form-grid three">
