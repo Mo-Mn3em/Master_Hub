@@ -381,7 +381,7 @@ export const PatientForm: React.FC = () => {
     try {
       const res = await verifyPatientNileApi({
         mobile: mobile,
-        typeOfIdentification: typeOfId,
+        typeOfIdentification: 'SSN',
         identificationNumber: ssn,
       });
 
