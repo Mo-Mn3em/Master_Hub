@@ -149,6 +149,7 @@ export interface UserAccount {
   email: string;
   role: 'admin' | 'user';
   department_code?: string | null;
+  department_codes?: string[];
   created_at?: string;
   updated_at?: string;
 }

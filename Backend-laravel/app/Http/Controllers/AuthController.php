@@ -47,11 +47,12 @@ class AuthController extends Controller
 
         return response()->json([
             'user' => [
-                'id'              => $user->id,
-                'name'            => $user->name,
-                'email'           => $user->email,
-                'role'            => $user->role ?? 'user',
-                'department_code' => $user->department_code ?? null,
+                'id'               => $user->id,
+                'name'             => $user->name,
+                'email'            => $user->email,
+                'role'             => $user->role ?? 'user',
+                'department_code'  => $user->department_code ?? null,
+                'department_codes' => $user->department_codes ?? [],
             ],
             'token'      => $token,
             'expires_at' => $expiresAt->toIso8601String(),

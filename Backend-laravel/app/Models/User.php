@@ -30,6 +30,36 @@ class User extends Authenticatable
     }
 
     /**
+     * The accessors to append to the model's array form.
+     *
+     * @var array<int, string>
+     */
+    protected $appends = ['department_codes'];
+
+    /**
+     * Get all assigned department codes as an array.
+     */
+    public function getDepartmentCodesAttribute(): array
+    {
+        if (empty($this->department_code)) {
+            return [];
+        }
+
+        // Try JSON decode first
+        $decoded = json_decode($this->department_code, true);
+        if (is_array($decoded)) {
+            return array_values(array_filter($decoded));
+        }
+
+        // Try comma-separated
+        if (str_contains($this->department_code, ',')) {
+            return array_values(array_filter(array_map('trim', explode(',', $this->department_code))));
+        }
+
+        return [$this->department_code];
+    }
+
+    /**
      * Check if user is an admin.
      */
     public function isAdmin(): bool
@@ -46,10 +76,11 @@ class User extends Authenticatable
             return true;
         }
 
-        if (empty($departmentCode) || empty($this->department_code)) {
+        if (empty($departmentCode)) {
             return false;
         }
 
-        return strtolower($this->department_code) === strtolower($departmentCode);
+        $codes = array_map('strtolower', $this->department_codes);
+        return in_array(strtolower($departmentCode), $codes, true);
     }
 }

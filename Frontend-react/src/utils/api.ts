@@ -80,6 +80,7 @@ export async function createUserApi(payload: {
   password: string;
   role: 'admin' | 'user';
   department_code?: string | null;
+  department_codes?: string[] | null;
 }): Promise<UserAccount> {
   const response = await fetch(`${API_BASE}/users`, {
     method: 'POST',
@@ -103,6 +104,7 @@ export async function updateUserApi(
     password?: string;
     role?: 'admin' | 'user';
     department_code?: string | null;
+    department_codes?: string[] | null;
   }
 ): Promise<UserAccount> {
   const response = await fetch(`${API_BASE}/users/${id}`, {

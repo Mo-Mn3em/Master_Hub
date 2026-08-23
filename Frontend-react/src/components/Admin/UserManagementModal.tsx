@@ -17,7 +17,9 @@ import {
   Search,
   Lock,
   Mail,
-  User as UserIcon
+  User as UserIcon,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 
 interface UserManagementModalProps {
@@ -42,7 +44,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({ isOpen
     email: '',
     password: '',
     role: 'user' as 'admin' | 'user',
-    department_code: 'orth' as string | null,
+    department_codes: ['orth'] as string[],
   });
 
   useEffect(() => {
@@ -64,6 +66,27 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({ isOpen
     }
   };
 
+  const parseUserDepartmentCodes = (user: UserAccount): string[] => {
+    if (Array.isArray(user.department_codes) && user.department_codes.length > 0) {
+      return user.department_codes;
+    }
+    if (user.department_code) {
+      if (Array.isArray(user.department_code)) {
+        return user.department_code;
+      }
+      try {
+        const parsed = JSON.parse(user.department_code);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {}
+
+      if (user.department_code.includes(',')) {
+        return user.department_code.split(',').map(s => s.trim()).filter(Boolean);
+      }
+      return [user.department_code];
+    }
+    return [];
+  };
+
   const handleOpenCreate = () => {
     setEditingUserId(null);
     setFormData({
@@ -71,7 +94,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({ isOpen
       email: '',
       password: '',
       role: 'user',
-      department_code: 'orth',
+      department_codes: ['orth'],
     });
     setError(null);
     setSuccess(null);
@@ -80,16 +103,46 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({ isOpen
 
   const handleOpenEdit = (user: UserAccount) => {
     setEditingUserId(user.id);
+    const codes = parseUserDepartmentCodes(user);
     setFormData({
       name: user.name,
       email: user.email,
       password: '',
       role: user.role,
-      department_code: user.department_code || 'orth',
+      department_codes: codes.length > 0 ? codes : ['orth'],
     });
     setError(null);
     setSuccess(null);
     setIsFormOpen(true);
+  };
+
+  const toggleDepartment = (deptCode: string) => {
+    const current = [...formData.department_codes];
+    const index = current.findIndex(c => c.toLowerCase() === deptCode.toLowerCase());
+    if (index >= 0) {
+      // Don't allow empty if at least one needed
+      if (current.length === 1) {
+        // allow removing or keeping
+      }
+      current.splice(index, 1);
+    } else {
+      current.push(deptCode);
+    }
+    setFormData({ ...formData, department_codes: current });
+  };
+
+  const handleSelectAllDepartments = () => {
+    setFormData({
+      ...formData,
+      department_codes: DEPARTMENTS.map(d => d.code),
+    });
+  };
+
+  const handleClearDepartments = () => {
+    setFormData({
+      ...formData,
+      department_codes: [],
+    });
   };
 
   const handleDeleteUser = async (user: UserAccount) => {
@@ -129,6 +182,11 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({ isOpen
       return;
     }
 
+    if (formData.role === 'user' && formData.department_codes.length === 0) {
+      setError('Please select at least one assigned department for this staff user.');
+      return;
+    }
+
     setActionLoading(true);
     try {
       if (editingUserId) {
@@ -137,7 +195,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({ isOpen
           name: formData.name.trim(),
           email: formData.email.trim(),
           role: formData.role,
-          department_code: formData.role === 'admin' ? null : formData.department_code,
+          department_codes: formData.role === 'admin' ? [] : formData.department_codes,
         };
         if (formData.password.trim()) {
           payload.password = formData.password.trim();
@@ -151,7 +209,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({ isOpen
           email: formData.email.trim(),
           password: formData.password.trim(),
           role: formData.role,
-          department_code: formData.role === 'admin' ? null : formData.department_code,
+          department_codes: formData.role === 'admin' ? [] : formData.department_codes,
         });
         setSuccess('New user created successfully.');
       }
@@ -170,17 +228,23 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({ isOpen
     return DEPARTMENTS.find(d => d.code.toLowerCase() === code.toLowerCase());
   };
 
-  const filteredUsers = users.filter(u => 
-    u.name.toLowerCase().includes(search.toLowerCase()) ||
-    u.email.toLowerCase().includes(search.toLowerCase()) ||
-    (u.department_code && u.department_code.toLowerCase().includes(search.toLowerCase()))
-  );
+  const filteredUsers = users.filter(u => {
+    const query = search.toLowerCase();
+    const matchesName = u.name.toLowerCase().includes(query);
+    const matchesEmail = u.email.toLowerCase().includes(query);
+    const codes = parseUserDepartmentCodes(u);
+    const matchesDepts = codes.some(c => {
+      const dept = getDeptInfo(c);
+      return c.toLowerCase().includes(query) || (dept && dept.label.toLowerCase().includes(query));
+    });
+    return matchesName || matchesEmail || matchesDepts;
+  });
 
   if (!isOpen) return null;
 
   return (
     <div className="app-modal-overlay" onClick={onClose}>
-      <div className="app-modal-window" onClick={(e) => e.stopPropagation()}>
+      <div className="app-modal-window" style={{ maxWidth: 940 }} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="app-modal-header">
           <div className="app-modal-header-left">
@@ -272,7 +336,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({ isOpen
                 </button>
               </div>
 
-              <form onSubmit={handleSaveForm} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <form onSubmit={handleSaveForm} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div className="modal-grid-2">
                   {/* Full Name */}
                   <div className="modal-form-group">
@@ -377,27 +441,103 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({ isOpen
                   </div>
                 </div>
 
-                {/* Assigned Department (Only visible if role is 'user') */}
+                {/* Assigned Departments (Multiple Selection) */}
                 {formData.role === 'user' && (
-                  <div className="modal-form-group" style={{ paddingTop: 8, borderTop: '1px solid #e2e8f0' }}>
-                    <label className="modal-form-label">
-                      Assigned Department (Can edit only this department) *
-                    </label>
-                    <select
-                      value={formData.department_code || ''}
-                      onChange={(e) => setFormData({ ...formData, department_code: e.target.value })}
-                      className="modal-select"
-                      required
-                    >
-                      <option value="" disabled>Select assigned department...</option>
-                      {DEPARTMENTS.map((dept) => (
-                        <option key={dept.code} value={dept.code}>
-                          {dept.label} ({dept.code.toUpperCase()})
-                        </option>
-                      ))}
-                    </select>
-                    <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 4 }}>
-                      ℹ️ This user can <strong>view all departments</strong>, but will only be allowed to <strong>edit</strong> the assigned department: <strong>{getDeptInfo(formData.department_code)?.label || 'Selected Dept'}</strong>.
+                  <div className="modal-form-group" style={{ paddingTop: 10, borderTop: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <label className="modal-form-label" style={{ margin: 0 }}>
+                        Assigned Departments (Can edit only these departments) *
+                      </label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 11.5, fontWeight: 700, color: '#0f766e' }}>
+                          {formData.department_codes.length} of {DEPARTMENTS.length} selected
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleSelectAllDepartments}
+                          style={{
+                            background: '#f1f5f9',
+                            border: '1px solid #cbd5e1',
+                            borderRadius: 6,
+                            padding: '2px 8px',
+                            fontSize: 11,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            color: '#334155'
+                          }}
+                        >
+                          Select All
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleClearDepartments}
+                          style={{
+                            background: '#f1f5f9',
+                            border: '1px solid #cbd5e1',
+                            borderRadius: 6,
+                            padding: '2px 8px',
+                            fontSize: 11,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            color: '#64748b'
+                          }}
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Department Checkbox / Pill Grid */}
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                      gap: 8,
+                      maxHeight: 180,
+                      overflowY: 'auto',
+                      padding: 8,
+                      background: '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: 10
+                    }}>
+                      {DEPARTMENTS.map((dept) => {
+                        const isSelected = formData.department_codes.some(c => c.toLowerCase() === dept.code.toLowerCase());
+                        return (
+                          <div
+                            key={dept.code}
+                            onClick={() => toggleDepartment(dept.code)}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 8,
+                              padding: '6px 10px',
+                              borderRadius: 8,
+                              cursor: 'pointer',
+                              border: isSelected ? `1.5px solid ${dept.color}` : '1px solid #e2e8f0',
+                              background: isSelected ? `${dept.color}15` : '#f8fafc',
+                              color: isSelected ? dept.color : '#334155',
+                              fontWeight: isSelected ? 700 : 500,
+                              fontSize: 12,
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            {isSelected ? (
+                              <CheckSquare style={{ width: 15, height: 15, color: dept.color, flexShrink: 0 }} />
+                            ) : (
+                              <Square style={{ width: 15, height: 15, color: '#94a3b8', flexShrink: 0 }} />
+                            )}
+                            <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {dept.label}
+                            </span>
+                            <span style={{ fontSize: 10, opacity: 0.7, textTransform: 'uppercase' }}>
+                              {dept.code}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 6 }}>
+                      ℹ️ This user can <strong>view all clinical programs</strong>, but edit permissions will be enabled <strong>only</strong> for the checked departments above.
                     </div>
                   </div>
                 )}
@@ -443,7 +583,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({ isOpen
                 </thead>
                 <tbody>
                   {filteredUsers.map((user) => {
-                    const dept = getDeptInfo(user.department_code);
+                    const assignedCodes = parseUserDepartmentCodes(user);
                     const isSelf = currentUser?.id === user.id;
 
                     return (
@@ -490,37 +630,48 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({ isOpen
                           ) : (
                             <span className="badge-dept">
                               <Building2 style={{ width: 12, height: 12 }} />
-                              <span>Staff</span>
+                              <span>Staff ({assignedCodes.length})</span>
                             </span>
                           )}
                         </td>
 
-                        {/* Department */}
+                        {/* Department Permissions */}
                         <td>
                           {user.role === 'admin' ? (
                             <span className="badge-all-depts">
                               ⭐ All Departments (Full Access)
                             </span>
-                          ) : dept ? (
-                            <span 
-                              style={{ 
-                                backgroundColor: `${dept.color}15`, 
-                                color: dept.color,
-                                border: `1px solid ${dept.color}40`,
-                                fontWeight: 700,
-                                fontSize: 11,
-                                padding: '3px 8px',
-                                borderRadius: 6,
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 6
-                              }}
-                            >
-                              <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: dept.color }} />
-                              <span>{dept.label}</span>
-                            </span>
+                          ) : assignedCodes.length > 0 ? (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, maxWidth: 380 }}>
+                              {assignedCodes.map(code => {
+                                const dept = getDeptInfo(code);
+                                const label = dept?.label || code.toUpperCase();
+                                const color = dept?.color || '#0f766e';
+                                return (
+                                  <span 
+                                    key={code}
+                                    style={{ 
+                                      backgroundColor: `${color}15`, 
+                                      color: color,
+                                      border: `1px solid ${color}40`,
+                                      fontWeight: 700,
+                                      fontSize: 11,
+                                      padding: '2px 7px',
+                                      borderRadius: 6,
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: 4
+                                    }}
+                                    title={label}
+                                  >
+                                    <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: color }} />
+                                    <span>{label}</span>
+                                  </span>
+                                );
+                              })}
+                            </div>
                           ) : (
-                            <span style={{ fontSize: 12, color: '#94a3b8', fontStyle: 'italic' }}>No department assigned</span>
+                            <span style={{ fontSize: 12, color: '#94a3b8', fontStyle: 'italic' }}>No departments assigned</span>
                           )}
                         </td>
 

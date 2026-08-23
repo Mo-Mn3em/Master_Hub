@@ -107,8 +107,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const canEditDepartment = (deptCode?: string): boolean => {
     if (isAdmin) return true;
     if (!deptCode) return true; // General patient demographic section
-    if (!currentUser?.department_code) return false;
-    return currentUser.department_code.toLowerCase() === deptCode.toLowerCase();
+    if (!currentUser) return false;
+
+    // 1. Check department_codes array
+    if (Array.isArray(currentUser.department_codes) && currentUser.department_codes.length > 0) {
+      return currentUser.department_codes.some(
+        c => c && c.toLowerCase() === deptCode.toLowerCase()
+      );
+    }
+
+    // 2. Check department_code string / JSON / comma-separated
+    if (currentUser.department_code) {
+      if (Array.isArray(currentUser.department_code)) {
+        return (currentUser.department_code as string[]).some(
+          c => c && c.toLowerCase() === deptCode.toLowerCase()
+        );
+      }
+      try {
+        const parsed = JSON.parse(currentUser.department_code);
+        if (Array.isArray(parsed)) {
+          return parsed.some(c => typeof c === 'string' && c.toLowerCase() === deptCode.toLowerCase());
+        }
+      } catch (e) {}
+
+      if (currentUser.department_code.includes(',')) {
+        return currentUser.department_code.split(',').some(c => c.trim().toLowerCase() === deptCode.toLowerCase());
+      }
+
+      return currentUser.department_code.toLowerCase() === deptCode.toLowerCase();
+    }
+
+    return false;
   };
 
   // Global unsaved changes browser tab protection

@@ -39,7 +39,7 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => {
-  const { currentModule, setCurrentModule, currentUser, isAdmin, logout } = useApp();
+  const { currentModule, setCurrentModule, currentUser, isAdmin, canEditDepartment, logout } = useApp();
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isUserMgmtModalOpen, setIsUserMgmtModalOpen] = useState(false);
 
@@ -55,10 +55,25 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
     return name.split(' ')[0].substring(0, 2).toUpperCase();
   };
 
-  const getDeptLabel = (code?: string | null) => {
-    if (!code) return null;
-    const dept = DEPARTMENTS.find(d => d.code.toLowerCase() === code.toLowerCase());
-    return dept?.label || code.toUpperCase();
+  const getUserAssignedDeptText = () => {
+    if (isAdmin) return 'Administrator';
+    if (!currentUser) return 'Coordinator';
+
+    const codes = Array.isArray(currentUser.department_codes) && currentUser.department_codes.length > 0
+      ? currentUser.department_codes
+      : currentUser.department_code
+        ? (Array.isArray(currentUser.department_code) ? currentUser.department_code : [currentUser.department_code])
+        : [];
+
+    if (codes.length === 0) return 'Coordinator';
+    if (codes.length === 1) {
+      const dept = DEPARTMENTS.find(d => d.code.toLowerCase() === codes[0].toLowerCase());
+      return dept?.label || codes[0].toUpperCase();
+    }
+
+    const firstDept = DEPARTMENTS.find(d => d.code.toLowerCase() === codes[0].toLowerCase());
+    const firstName = firstDept?.label || codes[0].toUpperCase();
+    return `${firstName} (+${codes.length - 1})`;
   };
 
   const getDeptIcon = (code: string, color?: string) => {
@@ -177,7 +192,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
           {DEPARTMENTS.filter(d => d.code !== 'anes').map(dept => {
             const isActive = currentModule === dept.code;
             const itemColor = dept.color || '#0f766e';
-            const isUserDept = currentUser?.department_code?.toLowerCase() === dept.code.toLowerCase();
+            const isUserDept = !isAdmin && canEditDepartment(dept.code);
 
             return (
               <div 
@@ -211,13 +226,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
                 {isAdmin && <ShieldCheck style={{ width: 14, height: 14, color: '#7e22ce', flexShrink: 0 }} />}
               </div>
               <div className="user-profile-role">
-                {isAdmin ? (
-                  <span style={{ color: '#7e22ce' }}>Administrator</span>
-                ) : currentUser.department_code ? (
-                  <span style={{ color: '#0f766e' }}>{getDeptLabel(currentUser.department_code)}</span>
-                ) : (
-                  <span style={{ color: '#64748b' }}>Coordinator</span>
-                )}
+                <span style={{ color: isAdmin ? '#7e22ce' : '#0f766e' }}>
+                  {getUserAssignedDeptText()}
+                </span>
               </div>
             </div>
 
