@@ -39,7 +39,7 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => {
-  const { currentModule, setCurrentModule, currentUser, isAdmin, canEditDepartment, logout } = useApp();
+  const { currentModule, setCurrentModule, currentUser, isAdmin, logout } = useApp();
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isUserMgmtModalOpen, setIsUserMgmtModalOpen] = useState(false);
 
@@ -192,7 +192,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
           {DEPARTMENTS.filter(d => d.code !== 'anes').map(dept => {
             const isActive = currentModule === dept.code;
             const itemColor = dept.color || '#0f766e';
-            const isUserDept = !isAdmin && canEditDepartment(dept.code);
 
             return (
               <div 
@@ -203,11 +202,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
               >
                 {getDeptIcon(dept.code, itemColor)}
                 <span className="truncate flex-1">{dept.label}</span>
-                {isUserDept && (
-                  <span className="text-[10px] bg-teal-50 text-teal-700 font-bold px-1.5 py-0.5 rounded border border-teal-200">
-                    My Dept
-                  </span>
-                )}
               </div>
             );
           })}
