@@ -204,38 +204,41 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
             <div className="user-avatar" title={currentUser.name}>
               {getInitials(currentUser.name)}
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="user-name truncate flex items-center gap-1" title={currentUser.name}>
+
+            <div className="user-profile-info">
+              <div className="user-profile-name" title={currentUser.name}>
                 <span>{currentUser.name}</span>
-                {isAdmin && <ShieldCheck className="w-3.5 h-3.5 text-purple-600 shrink-0" />}
+                {isAdmin && <ShieldCheck style={{ width: 14, height: 14, color: '#7e22ce', flexShrink: 0 }} />}
               </div>
-              <div className="text-[11px] text-slate-400 truncate">
+              <div className="user-profile-role">
                 {isAdmin ? (
-                  <span className="text-purple-600 font-medium">Administrator</span>
+                  <span style={{ color: '#7e22ce' }}>Administrator</span>
                 ) : currentUser.department_code ? (
-                  <span className="text-teal-600 font-medium">{getDeptLabel(currentUser.department_code)}</span>
+                  <span style={{ color: '#0f766e' }}>{getDeptLabel(currentUser.department_code)}</span>
                 ) : (
-                  <span>Coordinator</span>
+                  <span style={{ color: '#64748b' }}>Coordinator</span>
                 )}
               </div>
             </div>
 
             {/* User Action Controls */}
-            <div className="flex items-center gap-1">
+            <div className="user-profile-actions">
               <button 
                 onClick={() => setIsPasswordModalOpen(true)}
-                className="sidebar-logout-pill"
+                className="user-action-btn password"
                 title="Change Password"
+                aria-label="Change Password"
               >
-                <KeyRound className="w-3.5 h-3.5 text-slate-500" />
+                <KeyRound style={{ width: 14, height: 14 }} />
               </button>
 
               <button 
                 onClick={logout}
-                className="sidebar-logout-pill"
+                className="user-action-btn logout"
                 title="Sign Out"
+                aria-label="Sign Out"
               >
-                <LogOut className="w-3.5 h-3.5 text-red-500" />
+                <LogOut style={{ width: 14, height: 14 }} />
               </button>
             </div>
           </div>
