@@ -74,18 +74,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [currentModule, setCurrentModule] = useState<string>('hub');
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => {
     try {
+      const token = localStorage.getItem('master_hub_token');
+      // If token is missing, do not load cached user -> force login
+      if (!token) return null;
       const stored = localStorage.getItem('master_hub_user_account');
       if (stored) return JSON.parse(stored);
-      const name = localStorage.getItem('master_hub_user');
-      if (name) {
-        return {
-          id: 1,
-          name,
-          email: `${name}@masterhub.local`,
-          role: name.toLowerCase() === 'admin' ? 'admin' : 'user',
-          department_code: null,
-        };
-      }
     } catch (e) {}
     return null;
   });
@@ -100,6 +93,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isOnline, setIsOnline] = useState<boolean>(false);
   const [isFormDirty, setIsFormDirty] = useState<boolean>(false);
+
+  // Auto-listen to unauthorized event from API calls
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      setCurrentUser(null);
+    };
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
+  }, []);
 
   // Permission helpers
   const isAdmin = currentUser?.role === 'admin';

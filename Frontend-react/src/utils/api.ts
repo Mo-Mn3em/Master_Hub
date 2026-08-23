@@ -10,6 +10,16 @@ export const getToken = (): string | null => localStorage.getItem(TOKEN_KEY);
 export const setToken = (token: string) => localStorage.setItem(TOKEN_KEY, token);
 export const clearToken = () => localStorage.removeItem(TOKEN_KEY);
 
+function checkUnauthorized(response: Response) {
+  if (response.status === 401) {
+    clearToken();
+    localStorage.removeItem('master_hub_user_account');
+    localStorage.removeItem('master_hub_user');
+    window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+    throw new Error('Your session has expired or is unauthenticated. Please log in again.');
+  }
+}
+
 function authHeaders(): Record<string, string> {
   const token = getToken();
   return {
@@ -52,6 +62,8 @@ export async function changePasswordApi(
     }),
   });
 
+  checkUnauthorized(response);
+
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     throw new Error(data.message || data.errors?.current_password?.[0] || 'Failed to change password.');
@@ -64,6 +76,8 @@ export async function fetchUsersApi(): Promise<UserAccount[]> {
   const response = await fetch(`${API_BASE}/users`, {
     headers: authHeaders(),
   });
+
+  checkUnauthorized(response);
 
   if (!response.ok) {
     const errData = await response.json().catch(() => ({}));
@@ -87,6 +101,8 @@ export async function createUserApi(payload: {
     headers: authHeaders(),
     body: JSON.stringify(payload),
   });
+
+  checkUnauthorized(response);
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -113,6 +129,8 @@ export async function updateUserApi(
     body: JSON.stringify(payload),
   });
 
+  checkUnauthorized(response);
+
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     throw new Error(data.message || 'Failed to update user.');
@@ -126,6 +144,8 @@ export async function deleteUserApi(id: number): Promise<void> {
     method: 'DELETE',
     headers: authHeaders(),
   });
+
+  checkUnauthorized(response);
 
   if (!response.ok) {
     const errData = await response.json().catch(() => ({}));
