@@ -78,75 +78,78 @@ class NileApiService
         $cleanMobile = trim(str_replace([' ', '-', '(', ')'], '', $mobile));
         $cleanId = trim(str_replace([' ', '-'], '', $identificationNumber));
 
-        // Exact JSON payload strictly using 'SSN' as requested
-        $payload = [
-            'Patient' => [
+        // The NileAlamalInt API expects a FLAT JSON object (no 'Patient' wrapper) with camelCase keys
+        // Primary type is 'NationalID', with fallback to 'SSN'
+        $typesToTry = ['NationalID', 'SSN'];
+        $lastResult = null;
+
+        foreach ($typesToTry as $typeId) {
+            $payload = [
                 'mobile'               => $cleanMobile,
-                'TypeOfIdentification' => 'SSN',
-                'IdentificationNumber' => $cleanId,
-            ]
-        ];
+                'typeOfIdentification' => $typeId,
+                'identificationNumber' => $cleanId,
+            ];
 
-        try {
-            $req = Http::acceptJson()->asJson()->timeout(15);
+            try {
+                $req = Http::acceptJson()->asJson()->timeout(15);
 
-            if (!empty($this->username) && !empty($this->password)) {
-                try {
-                    $token = $this->getToken();
-                    if ($token) {
-                        $req = $req->withToken($token);
+                if (!empty($this->username) && !empty($this->password)) {
+                    try {
+                        $token = $this->getToken();
+                        if ($token) {
+                            $req = $req->withToken($token);
+                        }
+                    } catch (Exception $e) {
+                        Log::warning('Nile API token retrieval failed: ' . $e->getMessage());
                     }
-                } catch (Exception $e) {
-                    Log::warning('Nile API token retrieval failed: ' . $e->getMessage());
                 }
-            }
 
-            $response = $req->post($url, $payload);
+                $response = $req->post($url, $payload);
 
-            // If 401 Unauthorized and credentials are provided, attempt token refresh once
-            if ($response->status() === 401 && !empty($this->username) && !empty($this->password)) {
-                try {
-                    $token = $this->getToken(true);
-                    $response = Http::withToken($token)->acceptJson()->asJson()->timeout(15)->post($url, $payload);
-                } catch (Exception $e) {
-                    Log::warning('Nile API token retry failed: ' . $e->getMessage());
+                // If 401 Unauthorized, refresh token once
+                if ($response->status() === 401 && !empty($this->username) && !empty($this->password)) {
+                    try {
+                        $token = $this->getToken(true);
+                        $response = Http::withToken($token)->acceptJson()->asJson()->timeout(15)->post($url, $payload);
+                    } catch (Exception $e) {
+                        Log::warning('Nile API token retry failed: ' . $e->getMessage());
+                    }
                 }
-            }
 
-            if ($response->failed()) {
-                Log::error('Nile Patient Verification failed', [
+                if ($response->successful()) {
+                    $json = $response->json();
+                    $status = strtolower($json['status'] ?? $json['data']['status'] ?? '');
+                    $pData = $json['patientdata'] ?? $json['data']['patientdata'] ?? null;
+
+                    // If verified with valid patient data, return immediately!
+                    if ($status === 'verified' && !empty($pData) && !empty($pData['patientID'])) {
+                        return [
+                            'success' => true,
+                            'status'  => $response->status(),
+                            'data'    => $json,
+                        ];
+                    }
+
+                    $lastResult = [
+                        'success' => true,
+                        'status'  => $response->status(),
+                        'data'    => $json,
+                    ];
+                }
+            } catch (Exception $e) {
+                Log::error('Nile API Exception for type ' . $typeId, [
                     'url'     => $url,
-                    'status'  => $response->status(),
                     'payload' => $payload,
-                    'body'    => $response->body(),
+                    'error'   => $e->getMessage(),
                 ]);
-
-                return [
-                    'success' => false,
-                    'message' => 'Nile API verification returned error status ' . $response->status(),
-                    'status'  => $response->status(),
-                    'data'    => $response->json() ?? $response->body(),
-                ];
             }
-
-            return [
-                'success' => true,
-                'status'  => $response->status(),
-                'data'    => $response->json() ?? $response->body(),
-            ];
-        } catch (Exception $e) {
-            Log::error('Nile API Exception', [
-                'url'     => $url,
-                'payload' => $payload,
-                'error'   => $e->getMessage(),
-            ]);
-
-            return [
-                'success' => false,
-                'message' => 'Network error connecting to Nile API: ' . $e->getMessage(),
-                'status'  => 500,
-                'data'    => null,
-            ];
         }
+
+        return $lastResult ?? [
+            'success' => false,
+            'message' => 'Patient NOT found in Nile Alamal database.',
+            'status'  => 404,
+            'data'    => null,
+        ];
     }
 }
