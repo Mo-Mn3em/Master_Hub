@@ -70,7 +70,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [patients, setPatients] = useState<Patient[]>([]);
   const [researchTemplates, setResearchTemplates] = useState<{ [id: string]: ResearchTemplate }>({});
   const [currentModule, setCurrentModule] = useState<string>('hub');
-  const [currentUser, setCurrentUser] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<string | null>(() => localStorage.getItem('master_hub_user'));
   const [editingPatientId, setEditingPatientId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage] = useState<number>(15);

@@ -31,6 +31,7 @@ import DEPARTMENTS from '../../utils/departmentsData';
 export const GlobalDirectory: React.FC = () => {
   const {
     patients,
+    currentUser,
     currentModule,
     searchQuery,
     setSearchQuery,
@@ -614,7 +615,7 @@ export const GlobalDirectory: React.FC = () => {
                 )}
 
                 <div className="card-footer">
-                  Last Update: {new Date(patient.updatedAt || '').toLocaleDateString()} by {patient.updatedBy || 'Coordinator'}
+                  Last Update: {new Date(patient.updatedAt || '').toLocaleDateString()} by {patient.updatedBy || currentUser || 'Admin'}
                 </div>
               </div>
             );
