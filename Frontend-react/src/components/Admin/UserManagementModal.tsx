@@ -8,7 +8,6 @@ import {
   UserPlus, 
   ShieldCheck, 
   Building2, 
-  KeyRound, 
   Trash2, 
   Edit3, 
   CheckCircle2, 
@@ -180,186 +179,198 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({ isOpen
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-      <div 
-        className="w-full max-w-4xl bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[90vh]"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="app-modal-overlay" onClick={onClose}>
+      <div className="app-modal-window" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="px-6 py-5 bg-gradient-to-r from-slate-900 via-slate-800 to-teal-900 text-white flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-white/10 rounded-xl">
-              <Users className="w-5 h-5 text-teal-400" />
+        <div className="app-modal-header">
+          <div className="app-modal-header-left">
+            <div className="app-modal-header-icon">
+              <Users style={{ width: 20, height: 20 }} />
             </div>
             <div>
-              <h3 className="font-bold text-lg leading-tight flex items-center gap-2">
+              <h3 className="app-modal-title">
                 <span>System User Management</span>
-                <span className="px-2 py-0.5 text-[11px] font-semibold tracking-wide uppercase bg-teal-500/20 text-teal-300 rounded-md border border-teal-500/30">
-                  Admin Only
-                </span>
+                <span className="app-modal-badge">Admin Panel</span>
               </h3>
-              <p className="text-xs text-slate-300 mt-0.5">Manage user accounts and assign department editing permissions</p>
+              <div className="app-modal-sub">Manage user accounts and assign department editing permissions</div>
             </div>
           </div>
           <button 
             onClick={onClose} 
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+            className="app-modal-close-btn"
+            title="Close"
           >
-            <X className="w-5 h-5" />
+            <X style={{ width: 18, height: 18 }} />
           </button>
         </div>
 
         {/* Status Alerts */}
         {(error || success) && (
-          <div className="px-6 pt-4 shrink-0">
+          <div style={{ padding: '16px 24px 0' }}>
             {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-center justify-between text-sm text-red-700">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+              <div className="modal-alert-error">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <AlertCircle style={{ width: 16, height: 16, flexShrink: 0 }} />
                   <span>{error}</span>
                 </div>
-                <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600">
-                  <X className="w-4 h-4" />
+                <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#991b1b' }}>
+                  <X style={{ width: 14, height: 14 }} />
                 </button>
               </div>
             )}
             {success && (
-              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-sm text-emerald-700 font-medium">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <div className="modal-alert-success">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <CheckCircle2 style={{ width: 16, height: 16, flexShrink: 0 }} />
                   <span>{success}</span>
                 </div>
-                <button onClick={() => setSuccess(null)} className="text-emerald-400 hover:text-emerald-600">
-                  <X className="w-4 h-4" />
+                <button onClick={() => setSuccess(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#166534' }}>
+                  <X style={{ width: 14, height: 14 }} />
                 </button>
               </div>
             )}
           </div>
         )}
 
-        {/* Content Area */}
-        <div className="p-6 overflow-y-auto flex-1 space-y-6">
+        {/* Content Body */}
+        <div className="app-modal-body">
           {/* Top Bar: Search & Add Button */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="relative flex-1 min-w-[240px]">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ position: 'relative', flex: 1, minWidth: 260 }}>
+              <Search style={{ width: 16, height: 16, position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search users by name, username, or department..."
-                className="w-full pl-9 pr-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 transition-all"
+                className="modal-input"
+                style={{ paddingLeft: 36 }}
               />
             </div>
             <button
               onClick={handleOpenCreate}
-              className="px-4 py-2 text-sm font-semibold text-white bg-teal-600 hover:bg-teal-700 active:scale-95 rounded-xl shadow-sm transition-all flex items-center gap-2"
+              className="btn-primary-modal"
             >
-              <UserPlus className="w-4 h-4" />
+              <UserPlus style={{ width: 16, height: 16 }} />
               <span>Add New User</span>
             </button>
           </div>
 
           {/* User Form Inline Box */}
           {isFormOpen && (
-            <div className="p-5 bg-slate-50 border border-teal-200/80 rounded-2xl animate-fadeIn space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-                <h4 className="font-bold text-slate-800 text-sm flex items-center gap-2">
-                  {editingUserId ? <Edit3 className="w-4 h-4 text-teal-600" /> : <UserPlus className="w-4 h-4 text-teal-600" />}
+            <div className="modal-inline-form-box">
+              <div className="modal-inline-form-header">
+                <div className="modal-inline-form-title">
+                  {editingUserId ? <Edit3 style={{ width: 16, height: 16 }} /> : <UserPlus style={{ width: 16, height: 16 }} />}
                   <span>{editingUserId ? 'Edit User Account' : 'Create New User Account'}</span>
-                </h4>
+                </div>
                 <button 
                   onClick={() => setIsFormOpen(false)}
-                  className="text-xs text-slate-500 hover:text-slate-700 font-medium"
+                  style={{ background: 'none', border: 'none', color: '#64748b', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
                 >
                   Cancel
                 </button>
               </div>
 
-              <form onSubmit={handleSaveForm} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <form onSubmit={handleSaveForm} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div className="modal-grid-2">
                   {/* Full Name */}
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                      Full Name *
-                    </label>
-                    <div className="relative">
-                      <UserIcon className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <div className="modal-form-group">
+                    <label className="modal-form-label">Full Name *</label>
+                    <div style={{ position: 'relative' }}>
+                      <UserIcon style={{ width: 16, height: 16, position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
                       <input
                         type="text"
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         placeholder="e.g. Dr. Ahmed Mostafa"
-                        className="w-full pl-9 pr-3.5 py-2 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600"
+                        className="modal-input"
+                        style={{ paddingLeft: 36 }}
                         required
                       />
                     </div>
                   </div>
 
                   {/* Username / Email */}
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                      Username / Email *
-                    </label>
-                    <div className="relative">
-                      <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <div className="modal-form-group">
+                    <label className="modal-form-label">Username / Email *</label>
+                    <div style={{ position: 'relative' }}>
+                      <Mail style={{ width: 16, height: 16, position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
                       <input
                         type="text"
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         placeholder="e.g. ahmed.mostafa"
-                        className="w-full pl-9 pr-3.5 py-2 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600"
+                        className="modal-input"
+                        style={{ paddingLeft: 36 }}
                         required
                       />
                     </div>
                   </div>
 
                   {/* Password */}
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                  <div className="modal-form-group">
+                    <label className="modal-form-label">
                       Password {editingUserId ? '(Leave blank to keep current)' : '*'}
                     </label>
-                    <div className="relative">
-                      <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <div style={{ position: 'relative' }}>
+                      <Lock style={{ width: 16, height: 16, position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
                       <input
                         type="password"
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                         placeholder={editingUserId ? '••••••••' : 'Min. 4 characters'}
-                        className="w-full pl-9 pr-3.5 py-2 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600"
+                        className="modal-input"
+                        style={{ paddingLeft: 36 }}
                         required={!editingUserId}
                       />
                     </div>
                   </div>
 
                   {/* Role Selector */}
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                      Account Role *
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
+                  <div className="modal-form-group">
+                    <label className="modal-form-label">Account Role *</label>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                       <button
                         type="button"
                         onClick={() => setFormData({ ...formData, role: 'user' })}
-                        className={`py-2 px-3 text-xs font-semibold rounded-xl border flex items-center justify-center gap-1.5 transition-all ${
-                          formData.role === 'user'
-                            ? 'bg-teal-50 border-teal-500 text-teal-800 shadow-xs font-bold'
-                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                        }`}
+                        style={{
+                          padding: '9px 12px',
+                          fontSize: 12,
+                          fontWeight: 700,
+                          borderRadius: 10,
+                          border: formData.role === 'user' ? '1.5px solid #0f766e' : '1px solid #cbd5e1',
+                          background: formData.role === 'user' ? '#ccfbf1' : '#ffffff',
+                          color: formData.role === 'user' ? '#0f766e' : '#475569',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 6
+                        }}
                       >
-                        <Building2 className="w-3.5 h-3.5 text-teal-600" />
+                        <Building2 style={{ width: 14, height: 14 }} />
                         <span>Department User</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => setFormData({ ...formData, role: 'admin' })}
-                        className={`py-2 px-3 text-xs font-semibold rounded-xl border flex items-center justify-center gap-1.5 transition-all ${
-                          formData.role === 'admin'
-                            ? 'bg-purple-50 border-purple-500 text-purple-800 shadow-xs font-bold'
-                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                        }`}
+                        style={{
+                          padding: '9px 12px',
+                          fontSize: 12,
+                          fontWeight: 700,
+                          borderRadius: 10,
+                          border: formData.role === 'admin' ? '1.5px solid #7e22ce' : '1px solid #cbd5e1',
+                          background: formData.role === 'admin' ? '#f3e8ff' : '#ffffff',
+                          color: formData.role === 'admin' ? '#7e22ce' : '#475569',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 6
+                        }}
                       >
-                        <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
+                        <ShieldCheck style={{ width: 14, height: 14 }} />
                         <span>Administrator</span>
                       </button>
                     </div>
@@ -368,14 +379,14 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({ isOpen
 
                 {/* Assigned Department (Only visible if role is 'user') */}
                 {formData.role === 'user' && (
-                  <div className="pt-2 border-t border-slate-200">
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                  <div className="modal-form-group" style={{ paddingTop: 8, borderTop: '1px solid #e2e8f0' }}>
+                    <label className="modal-form-label">
                       Assigned Department (Can edit only this department) *
                     </label>
                     <select
                       value={formData.department_code || ''}
                       onChange={(e) => setFormData({ ...formData, department_code: e.target.value })}
-                      className="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 font-medium"
+                      className="modal-select"
                       required
                     >
                       <option value="" disabled>Select assigned department...</option>
@@ -385,27 +396,27 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({ isOpen
                         </option>
                       ))}
                     </select>
-                    <p className="text-[11.5px] text-slate-500 mt-1">
-                      ℹ️ This user will be able to view all departments, but will only have edit permissions on <strong>{getDeptInfo(formData.department_code)?.label || 'the selected department'}</strong>.
-                    </p>
+                    <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 4 }}>
+                      ℹ️ This user can <strong>view all departments</strong>, but will only be allowed to <strong>edit</strong> the assigned department: <strong>{getDeptInfo(formData.department_code)?.label || 'Selected Dept'}</strong>.
+                    </div>
                   </div>
                 )}
 
                 {/* Form Action Buttons */}
-                <div className="flex items-center justify-end gap-3 pt-2">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, paddingTop: 6 }}>
                   <button
                     type="button"
                     onClick={() => setIsFormOpen(false)}
-                    className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors"
+                    className="btn-secondary-modal"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={actionLoading}
-                    className="px-5 py-2 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 active:scale-95 disabled:opacity-50 rounded-xl shadow-xs transition-all flex items-center gap-2"
+                    className="btn-primary-modal"
                   >
-                    {actionLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    {actionLoading && <Loader2 style={{ width: 14, height: 14, animation: 'spin 1s linear infinite' }} />}
                     <span>{editingUserId ? 'Save Changes' : 'Create User'}</span>
                   </button>
                 </div>
@@ -415,103 +426,121 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({ isOpen
 
           {/* User List Table */}
           {loading ? (
-            <div className="py-12 flex flex-col items-center justify-center gap-3 text-slate-400">
-              <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
-              <p className="text-sm font-medium">Loading system users...</p>
+            <div style={{ padding: '40px 0', textAlign: 'center', color: '#64748b' }}>
+              <Loader2 style={{ width: 32, height: 32, animation: 'spin 1s linear infinite', margin: '0 auto 8px', color: '#0f766e' }} />
+              <p style={{ fontSize: 13, fontWeight: 600 }}>Loading system users...</p>
             </div>
           ) : filteredUsers.length > 0 ? (
-            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-slate-50 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200">
+            <div className="modal-table-container">
+              <table className="modal-table">
+                <thead>
                   <tr>
-                    <th className="px-5 py-3.5 font-semibold">User</th>
-                    <th className="px-4 py-3.5 font-semibold">Role</th>
-                    <th className="px-4 py-3.5 font-semibold">Department Permission</th>
-                    <th className="px-5 py-3.5 font-semibold text-right">Actions</th>
+                    <th>User</th>
+                    <th>Role</th>
+                    <th>Department Permission</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody>
                   {filteredUsers.map((user) => {
                     const dept = getDeptInfo(user.department_code);
                     const isSelf = currentUser?.id === user.id;
 
                     return (
-                      <tr key={user.id} className="hover:bg-slate-50/70 transition-colors">
+                      <tr key={user.id}>
                         {/* User Info */}
-                        <td className="px-5 py-3.5">
-                          <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-slate-700 to-slate-900 text-white font-bold flex items-center justify-center text-xs shrink-0 shadow-xs">
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <div style={{ 
+                              width: 34, 
+                              height: 34, 
+                              borderRadius: 10, 
+                              background: '#0f766e', 
+                              color: '#ffffff', 
+                              fontWeight: 800, 
+                              fontSize: 12, 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'center',
+                              flexShrink: 0
+                            }}>
                               {user.name.charAt(0).toUpperCase()}
                             </div>
                             <div>
-                              <div className="font-semibold text-slate-800 flex items-center gap-1.5">
+                              <div style={{ fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 6 }}>
                                 <span>{user.name}</span>
                                 {isSelf && (
-                                  <span className="px-1.5 py-0.2 text-[10px] bg-slate-100 text-slate-600 rounded font-normal">
+                                  <span style={{ fontSize: 10, background: '#f1f5f9', color: '#475569', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>
                                     You
                                   </span>
                                 )}
                               </div>
-                              <div className="text-xs text-slate-400">{user.email}</div>
+                              <div style={{ fontSize: 12, color: '#64748b' }}>{user.email}</div>
                             </div>
                           </div>
                         </td>
 
                         {/* Role */}
-                        <td className="px-4 py-3.5">
+                        <td>
                           {user.role === 'admin' ? (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-purple-50 text-purple-700 border border-purple-200">
-                              <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
+                            <span className="badge-admin">
+                              <ShieldCheck style={{ width: 12, height: 12 }} />
                               <span>Admin</span>
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                              <Building2 className="w-3.5 h-3.5 text-blue-600" />
+                            <span className="badge-dept">
+                              <Building2 style={{ width: 12, height: 12 }} />
                               <span>Staff</span>
                             </span>
                           )}
                         </td>
 
                         {/* Department */}
-                        <td className="px-4 py-3.5">
+                        <td>
                           {user.role === 'admin' ? (
-                            <span className="text-xs font-medium text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                            <span className="badge-all-depts">
                               ⭐ All Departments (Full Access)
                             </span>
                           ) : dept ? (
                             <span 
-                              className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full"
                               style={{ 
                                 backgroundColor: `${dept.color}15`, 
                                 color: dept.color,
-                                border: `1px solid ${dept.color}40`
+                                border: `1px solid ${dept.color}40`,
+                                fontWeight: 700,
+                                fontSize: 11,
+                                padding: '3px 8px',
+                                borderRadius: 6,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 6
                               }}
                             >
-                              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: dept.color }} />
+                              <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: dept.color }} />
                               <span>{dept.label}</span>
                             </span>
                           ) : (
-                            <span className="text-xs text-slate-400 italic">No department assigned</span>
+                            <span style={{ fontSize: 12, color: '#94a3b8', fontStyle: 'italic' }}>No department assigned</span>
                           )}
                         </td>
 
                         {/* Actions */}
-                        <td className="px-5 py-3.5 text-right">
-                          <div className="inline-flex items-center gap-1.5">
+                        <td style={{ textAlign: 'right' }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                             <button
                               onClick={() => handleOpenEdit(user)}
-                              className="p-1.5 text-slate-500 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
+                              className="btn-icon-action edit"
                               title="Edit user"
                             >
-                              <Edit3 className="w-4 h-4" />
+                              <Edit3 style={{ width: 14, height: 14 }} />
                             </button>
                             <button
                               onClick={() => handleDeleteUser(user)}
                               disabled={isSelf || actionLoading}
-                              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 rounded-lg transition-colors"
+                              className="btn-icon-action delete"
                               title={isSelf ? 'Cannot delete your own account' : 'Delete user'}
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 style={{ width: 14, height: 14 }} />
                             </button>
                           </div>
                         </td>
@@ -522,19 +551,21 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({ isOpen
               </table>
             </div>
           ) : (
-            <div className="py-12 text-center text-slate-400 bg-slate-50 rounded-2xl border border-slate-200">
-              <Users className="w-10 h-10 mx-auto mb-2 text-slate-300" />
-              <p className="text-sm font-medium">No users found matching your search.</p>
+            <div style={{ padding: '36px 0', textAlign: 'center', color: '#94a3b8', background: '#f8fafc', borderRadius: 12, border: '1px dashed #cbd5e1' }}>
+              <Users style={{ width: 36, height: 36, margin: '0 auto 8px', color: '#cbd5e1' }} />
+              <p style={{ fontSize: 13, fontWeight: 600 }}>No users found matching your search.</p>
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500 shrink-0">
-          <div>Total registered users: <strong>{users.length}</strong></div>
+        <div className="app-modal-footer">
+          <div style={{ marginRight: 'auto', fontSize: 12, color: '#64748b' }}>
+            Total registered users: <strong>{users.length}</strong>
+          </div>
           <button
             onClick={onClose}
-            className="px-4 py-2 font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl transition-colors shadow-xs"
+            className="btn-secondary-modal"
           >
             Close
           </button>
@@ -543,3 +574,4 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({ isOpen
     </div>
   );
 };
+

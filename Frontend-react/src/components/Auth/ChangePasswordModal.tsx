@@ -61,133 +61,135 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-      <div 
-        className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="app-modal-overlay" onClick={onClose}>
+      <div className="app-modal-window sm" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="px-6 py-5 bg-gradient-to-r from-teal-800 via-teal-700 to-slate-900 text-white flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/10 rounded-xl backdrop-blur-xs">
-              <KeyRound className="w-5 h-5 text-teal-300" />
+        <div className="app-modal-header">
+          <div className="app-modal-header-left">
+            <div className="app-modal-header-icon">
+              <KeyRound style={{ width: 18, height: 18 }} />
             </div>
             <div>
-              <h3 className="font-bold text-base leading-tight">Change Password</h3>
-              <p className="text-xs text-teal-100/80 mt-0.5">Update your account credentials</p>
+              <h3 className="app-modal-title">Change Password</h3>
+              <div className="app-modal-sub">Update your account login credentials</div>
             </div>
           </div>
           <button 
             onClick={onClose} 
-            className="p-1.5 rounded-lg text-teal-200 hover:text-white hover:bg-white/10 transition-colors"
+            className="app-modal-close-btn"
+            title="Close"
           >
-            <X className="w-5 h-5" />
+            <X style={{ width: 18, height: 18 }} />
           </button>
         </div>
 
         {/* Body Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
           {error && (
-            <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5 text-sm text-red-700">
-              <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 shrink-0" />
-              <span>{error}</span>
+            <div className="modal-alert-error">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <AlertCircle style={{ width: 16, height: 16, flexShrink: 0 }} />
+                <span>{error}</span>
+              </div>
+              <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#991b1b' }}>
+                <X style={{ width: 14, height: 14 }} />
+              </button>
             </div>
           )}
 
           {success && (
-            <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2.5 text-sm text-emerald-700 font-medium">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>{success}</span>
+            <div className="modal-alert-success">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <CheckCircle2 style={{ width: 16, height: 16, flexShrink: 0 }} />
+                <span>{success}</span>
+              </div>
             </div>
           )}
 
           {/* Current Password */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-              Current Password
-            </label>
-            <div className="relative">
+          <div className="modal-form-group">
+            <label className="modal-form-label">Current Password</label>
+            <div style={{ position: 'relative' }}>
               <input
                 type={showCurrent ? 'text' : 'password'}
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 placeholder="Enter current password"
-                className="w-full px-3.5 py-2.5 pr-10 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all"
+                className="modal-input"
+                style={{ paddingRight: 36 }}
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowCurrent(!showCurrent)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
               >
-                {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {showCurrent ? <EyeOff style={{ width: 16, height: 16 }} /> : <Eye style={{ width: 16, height: 16 }} />}
               </button>
             </div>
           </div>
 
           {/* New Password */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-              New Password
-            </label>
-            <div className="relative">
+          <div className="modal-form-group">
+            <label className="modal-form-label">New Password</label>
+            <div style={{ position: 'relative' }}>
               <input
                 type={showNew ? 'text' : 'password'}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="Enter new password (min. 4 characters)"
-                className="w-full px-3.5 py-2.5 pr-10 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all"
+                className="modal-input"
+                style={{ paddingRight: 36 }}
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowNew(!showNew)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
               >
-                {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {showNew ? <EyeOff style={{ width: 16, height: 16 }} /> : <Eye style={{ width: 16, height: 16 }} />}
               </button>
             </div>
           </div>
 
           {/* Confirm New Password */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-              Confirm New Password
-            </label>
-            <div className="relative">
+          <div className="modal-form-group">
+            <label className="modal-form-label">Confirm New Password</label>
+            <div style={{ position: 'relative' }}>
               <input
                 type={showConfirm ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Confirm new password"
-                className="w-full px-3.5 py-2.5 pr-10 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all"
+                className="modal-input"
+                style={{ paddingRight: 36 }}
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowConfirm(!showConfirm)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
               >
-                {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {showConfirm ? <EyeOff style={{ width: 16, height: 16 }} /> : <Eye style={{ width: 16, height: 16 }} />}
               </button>
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="pt-3 flex items-center justify-end gap-3 border-t border-slate-100">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, paddingTop: 8, borderTop: '1px solid #e2e8f0' }}>
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+              className="btn-secondary-modal"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2 text-sm font-semibold text-white bg-gradient-to-r from-teal-700 to-teal-600 hover:from-teal-800 hover:to-teal-700 active:scale-95 disabled:opacity-50 rounded-xl shadow-sm transition-all flex items-center gap-2"
+              className="btn-primary-modal"
             >
-              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+              {loading && <Loader2 style={{ width: 14, height: 14, animation: 'spin 1s linear infinite' }} />}
               <span>{loading ? 'Updating...' : 'Update Password'}</span>
             </button>
           </div>
