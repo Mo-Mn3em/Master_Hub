@@ -67,19 +67,19 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-6 py-5 bg-gradient-to-r from-emerald-600 to-teal-700 text-white flex items-center justify-between">
+        <div className="px-6 py-5 bg-gradient-to-r from-teal-800 via-teal-700 to-slate-900 text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/10 rounded-xl">
-              <KeyRound className="w-5 h-5 text-white" />
+            <div className="p-2 bg-white/10 rounded-xl backdrop-blur-xs">
+              <KeyRound className="w-5 h-5 text-teal-300" />
             </div>
             <div>
-              <h3 className="font-bold text-lg leading-tight">Change Password</h3>
-              <p className="text-xs text-emerald-100 mt-0.5">Update your account credentials</p>
+              <h3 className="font-bold text-base leading-tight">Change Password</h3>
+              <p className="text-xs text-teal-100/80 mt-0.5">Update your account credentials</p>
             </div>
           </div>
           <button 
             onClick={onClose} 
-            className="p-1.5 rounded-lg text-emerald-100 hover:text-white hover:bg-white/10 transition-colors"
+            className="p-1.5 rounded-lg text-teal-200 hover:text-white hover:bg-white/10 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -185,7 +185,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 disabled:opacity-50 rounded-xl shadow-sm transition-all flex items-center gap-2"
+              className="px-5 py-2 text-sm font-semibold text-white bg-gradient-to-r from-teal-700 to-teal-600 hover:from-teal-800 hover:to-teal-700 active:scale-95 disabled:opacity-50 rounded-xl shadow-sm transition-all flex items-center gap-2"
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               <span>{loading ? 'Updating...' : 'Update Password'}</span>

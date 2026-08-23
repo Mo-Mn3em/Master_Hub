@@ -131,9 +131,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
           </div>
 
           <div 
-            className={`nav-item ${currentModule === 'stats' ? 'active' : ''}`}
+            className={`nav-item ${currentModule === 'surg' ? 'active' : ''}`}
+            style={{ '--nav-accent': '#10b981' } as React.CSSProperties}
+            onClick={() => handleNavClick('surg')}
+          >
+            <Scissors className="w-4 h-4 flex-shrink-0" style={{ color: '#10b981' }} />
+            <span>Surgical List</span>
+          </div>
+
+          <div 
+            className={`nav-item ${currentModule === 'analytics' || currentModule === 'stats' ? 'active' : ''}`}
             style={{ '--nav-accent': '#6366f1' } as React.CSSProperties}
-            onClick={() => handleNavClick('stats')}
+            onClick={() => handleNavClick('analytics')}
           >
             <PieChart className="w-4 h-4 flex-shrink-0" style={{ color: '#6366f1' }} />
             <span>Analytics & Reports</span>
@@ -157,7 +166,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
                 style={{ '--nav-accent': '#0d9488' } as React.CSSProperties}
                 onClick={() => setIsUserMgmtModalOpen(true)}
               >
-                <UserCog className="w-4 h-4 flex-shrink-0 text-teal-600" />
+                <UserCog className="w-4 h-4 flex-shrink-0" style={{ color: '#0d9488' }} />
                 <span>Manage Users & Roles</span>
               </div>
             </>
