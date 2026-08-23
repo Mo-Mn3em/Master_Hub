@@ -169,17 +169,17 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .nav-section-label {
-  padding: 20px 20px 8px;
+  padding: 16px 14px 6px;
   font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #475569;
+  letter-spacing: 0.06em;
+  color: #334155;
 }
 
 .nav-links {
   flex: 1;
-  padding: 8px 0;
+  padding: 4px 0 12px;
   overflow-y: auto;
 }
 
@@ -192,15 +192,15 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .nav-item {
-  padding: 10px 14px;
-  margin: 2px 10px;
+  padding: 9px 12px;
+  margin: 2px 8px;
   display: flex;
   align-items: center;
   gap: 12px;
   cursor: pointer;
   border-radius: 8px;
-  color: #1e293b;
-  font-weight: 600;
+  color: #0f172a;
+  font-weight: 700;
   font-size: 13.5px;
   transition: all 0.2s ease;
   position: relative;
@@ -214,9 +214,9 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .nav-item.active {
-  background: color-mix(in srgb, var(--nav-accent, #0f766e) 15%, transparent);
+  background: color-mix(in srgb, var(--nav-accent, #0f766e) 16%, #f0fdfa);
   color: var(--nav-accent, #0f766e);
-  font-weight: 700;
+  font-weight: 800;
   border-left: 3.5px solid var(--nav-accent, #0f766e);
 }
 

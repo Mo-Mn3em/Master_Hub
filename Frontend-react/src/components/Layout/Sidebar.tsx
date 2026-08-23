@@ -89,30 +89,43 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
 
   return (
     <>
-      <nav className={`app-sidebar ${collapsed ? 'collapsed' : ''}`}>
-        {/* Toggle Button */}
-        <button 
-          className="sidebar-toggle-btn"
-          onClick={() => setCollapsed(!collapsed)}
-          title={collapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-          aria-label={collapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-        >
-          {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-        </button>
+      {/* Mobile Backdrop Overlay */}
+      {!collapsed && (
+        <div 
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 md:hidden"
+          onClick={() => setCollapsed(true)}
+        />
+      )}
 
-        {/* Brand Header */}
-        <div className="sidebar-brand">
-          <div className="brand-icon">
-            <ShieldAlert className="w-5 h-5 text-white" />
+      <nav id="sidebar" className={`bg-white border-r border-slate-200 flex flex-col h-screen ${collapsed ? 'collapsed' : ''}`}>
+        {/* Header with Collapse Button & Brand */}
+        <div className="p-4 pb-3 border-b border-slate-100 flex flex-col gap-2.5">
+          <div className="flex items-center justify-between">
+            <button 
+              onClick={() => setCollapsed(!collapsed)}
+              className="w-7 h-7 flex items-center justify-center rounded-md border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 shadow-xs transition-colors"
+              title={collapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+              aria-label={collapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+            >
+              {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+            </button>
           </div>
-          <div className="brand-text">
-            <div className="brand-title">MASTER HUB</div>
-            <div className="brand-sub">Patient Coordinator Center</div>
+
+          <div>
+            <div className="w-9 h-9 rounded-xl bg-slate-100/90 border border-slate-200/80 flex items-center justify-center text-slate-800 shadow-xs mb-2">
+              <ShieldAlert className="w-5 h-5 text-slate-800 stroke-[2.2]" />
+            </div>
+            <div className="text-[14px] font-black tracking-wide text-[#0f2d59] uppercase leading-tight font-sans">
+              MASTER HUB
+            </div>
+            <div className="text-[10.5px] font-bold tracking-wider text-slate-500 uppercase mt-0.5 font-sans">
+              PATIENT COORDINATOR CENTER
+            </div>
           </div>
         </div>
 
         {/* Scrollable Nav List */}
-        <div className="sidebar-nav">
+        <div className="nav-links flex-1 overflow-y-auto py-2">
           {/* Main Views */}
           <div className="nav-section-label">Main Views</div>
           
