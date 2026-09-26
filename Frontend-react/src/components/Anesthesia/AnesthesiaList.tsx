@@ -95,8 +95,10 @@ export const AnesthesiaList: React.FC = () => {
     if (!cloned.programs) cloned.programs = {};
     if (!cloned.programs.anes) cloned.programs.anes = { enrolled: true };
     
-    // Handle nested fields
-    if (path.includes('.')) {
+    // Handle direct demographic fields or nested fields
+    if (path === 'bas_blood') {
+      cloned.bas_blood = value;
+    } else if (path.includes('.')) {
       const parts = path.split('.');
       let current = cloned;
       for (let i = 0; i < parts.length - 1; i++) {
@@ -228,9 +230,34 @@ export const AnesthesiaList: React.FC = () => {
                   </h3>
                   <div style={{ display: 'flex', alignItems: 'center', marginTop: 4, gap: 8 }}>
                     <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>{patient.bas_mrn}</span>
-                    <span className={`blood-tag ${patient.bas_blood?.includes('-') ? 'blood-neg' : 'blood-pos'}`}>
-                      {patient.bas_blood || 'O+'}
-                    </span>
+                    <select
+                      value={patient.bas_blood || ''}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        handleInlineEdit(patient, 'bas_blood', e.target.value);
+                      }}
+                      className={`blood-tag ${patient.bas_blood?.includes('-') ? 'blood-neg' : 'blood-pos'}`}
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        padding: '2px 6px',
+                        borderRadius: 6,
+                        border: '1px solid var(--border)',
+                        cursor: 'pointer',
+                        background: 'var(--surface)'
+                      }}
+                      title="Click to view or edit patient blood group"
+                    >
+                      <option value="">Blood: Unknown</option>
+                      <option value="A+">A+</option>
+                      <option value="A-">A-</option>
+                      <option value="B+">B+</option>
+                      <option value="B-">B-</option>
+                      <option value="AB+">AB+</option>
+                      <option value="AB-">AB-</option>
+                      <option value="O+">O+</option>
+                      <option value="O-">O-</option>
+                    </select>
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 8, fontWeight: 500 }}>
                     Surgical Clinic: <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{getPrimaryClinicLabel(patient)}</span>

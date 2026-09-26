@@ -8,6 +8,7 @@ use App\Models\Dept;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Schema;
 
 class CasesController extends Controller
 {
@@ -58,7 +59,12 @@ class CasesController extends Controller
         }
 
         $query = $this->applySorting($query, $request);
-        return response()->json($query->paginate(20));
+
+        if ($request->has('per_page') && $request->input('per_page') !== 'all') {
+            return response()->json($query->paginate((int)$request->input('per_page')));
+        }
+
+        return response()->json($query->get());
     }
 
     // func to return the cases w filters and sorting.
@@ -90,51 +96,108 @@ class CasesController extends Controller
 
         if ($request->filled('department_code')) {
             $deptCode = $request->input('department_code');
-            $query->whereHas('departments', function ($q) use ($deptCode) {
-                $q->where('code', $deptCode);
+            $deptInfo = $this->deptCodeToMap[$deptCode] ?? null;
+            $deptMaster = Department::where('code', $deptCode)->first();
+            $deptName = $deptMaster ? $deptMaster->name : '';
+
+            $query->where(function ($q) use ($deptCode, $deptInfo, $deptName) {
+                $q->whereHas('departments', function ($sub) use ($deptCode) {
+                    $sub->where('code', $deptCode);
+                });
+
+                if ($deptInfo && !empty($deptInfo['relation'])) {
+                    $q->orWhereHas($deptInfo['relation'], function ($sub) {
+                        $sub->where('status', 'enrolled');
+                    });
+                }
+
+                if (!empty($deptName)) {
+                    $q->orWhere('cases.programs', 'like', "%{$deptName}%");
+                }
             });
         }
 
         $query = $this->applySorting($query, $request);
-        return response()->json($query->paginate(20));
+
+        if ($request->has('per_page') && $request->input('per_page') !== 'all') {
+            return response()->json($query->paginate((int)$request->input('per_page')));
+        }
+
+        return response()->json($query->get());
     }
 
     protected function applySorting($query, Request $request)
     {
-        $sortBy = $request->input('sort_by', 'surgery_asc');
+        $sortBy = $request->input('sort_by', 'latest');
 
-        if ($sortBy === 'age_asc') {
-            return $query->orderBy('cases.date_of_birth', 'desc')->orderBy('cases.created_at', 'desc');
-        } elseif ($sortBy === 'age_desc') {
-            return $query->orderBy('cases.date_of_birth', 'asc')->orderBy('cases.created_at', 'desc');
-        } elseif ($sortBy === 'surgery_desc') {
-            return $query->leftJoin('dept_surgical_list', 'cases.id', '=', 'dept_surgical_list.case_id')
-                         ->select('cases.*')
-                         ->orderBy('dept_surgical_list.scheduled_date', 'desc')
-                         ->orderBy('cases.created_at', 'desc');
-        } else { // 'surgery_asc' (Default: closest surgery date to farthest, fallback by age)
+        if ($sortBy === 'surgery_asc') {
             return $query->leftJoin('dept_surgical_list', 'cases.id', '=', 'dept_surgical_list.case_id')
                          ->select('cases.*')
                          ->orderByRaw('CASE WHEN dept_surgical_list.scheduled_date IS NULL THEN 1 ELSE 0 END ASC')
                          ->orderBy('dept_surgical_list.scheduled_date', 'asc')
-                         ->orderBy('cases.date_of_birth', 'desc')
-                         ->orderBy('cases.created_at', 'desc');
+                         ->orderBy('cases.created_at', 'desc')
+                         ->orderBy('cases.id', 'desc');
+        } elseif ($sortBy === 'surgery_desc') {
+            return $query->leftJoin('dept_surgical_list', 'cases.id', '=', 'dept_surgical_list.case_id')
+                         ->select('cases.*')
+                         ->orderBy('dept_surgical_list.scheduled_date', 'desc')
+                         ->orderBy('cases.created_at', 'desc')
+                         ->orderBy('cases.id', 'desc');
+        } elseif ($sortBy === 'age_asc') {
+            return $query->orderBy('cases.date_of_birth', 'desc')->orderBy('cases.created_at', 'desc');
+        } elseif ($sortBy === 'age_desc') {
+            return $query->orderBy('cases.date_of_birth', 'asc')->orderBy('cases.created_at', 'desc');
+        } elseif ($sortBy === 'oldest') {
+            return $query->orderBy('cases.created_at', 'asc')->orderBy('cases.id', 'asc');
+        } else { // 'latest' (Default: newest created/registered cases first)
+            return $query->orderBy('cases.created_at', 'desc')->orderBy('cases.id', 'desc');
         }
     }
 
     // func to store case in DB and sync dedicated department tables.
     public function store(Request $request)
     {
-        $validated = $this->validateData($request);
+        try {
+            $validated = $this->validateData($request);
 
-        $case = DB::transaction(function () use ($validated, $request) {
-            $createdCase = Cases::create($validated);
-            $this->syncDepartments($createdCase, $request);
-            return $createdCase;
-        });
+            $userName = $request->user()?->name ?: ($request->input('created_by') ?: 'Admin');
+            if (empty($validated['created_by'])) {
+                $validated['created_by'] = $userName;
+            }
+            if (empty($validated['updated_by'])) {
+                $validated['updated_by'] = $userName;
+            }
 
-        $case->load(self::$deptRelations);
-        return response()->json($case, 201);
+            if (!Schema::hasColumn('cases', 'created_by')) {
+                unset($validated['created_by']);
+            }
+            if (!Schema::hasColumn('cases', 'updated_by')) {
+                unset($validated['updated_by']);
+            }
+
+            $case = DB::transaction(function () use ($validated, $request) {
+                $createdCase = Cases::create($validated);
+                $this->syncDepartments($createdCase, $request);
+                return $createdCase;
+            });
+
+            $case->load(self::$deptRelations);
+            return response()->json($case, 201);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'message' => 'Validation failed for new case.',
+                'errors'  => $e->errors(),
+            ], 422);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error("Failed to create case: " . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'payload' => $request->all()
+            ]);
+            return response()->json([
+                'message' => 'Failed to create case: ' . $e->getMessage(),
+                'error'   => $e->getMessage()
+            ], 500);
+        }
     }
 
     // Bulk store cases
@@ -185,9 +248,21 @@ class CasesController extends Controller
             ], 422);
         }
 
-        $created = DB::transaction(function () use ($validatedItems, $itemRequests) {
+        $created = DB::transaction(function () use ($validatedItems, $itemRequests, $request) {
             $results = [];
             foreach ($validatedItems as $index => $data) {
+                if (empty($data['created_by'])) {
+                    $data['created_by'] = $request->user()?->name ?: ($itemRequests[$index]->input('created_by') ?: 'Admin');
+                }
+                if (empty($data['updated_by'])) {
+                    $data['updated_by'] = $data['created_by'];
+                }
+                if (!Schema::hasColumn('cases', 'created_by')) {
+                    unset($data['created_by']);
+                }
+                if (!Schema::hasColumn('cases', 'updated_by')) {
+                    unset($data['updated_by']);
+                }
                 $case = Cases::create($data);
                 $this->syncDepartments($case, $itemRequests[$index]);
                 $case->load(self::$deptRelations);
@@ -213,16 +288,40 @@ class CasesController extends Controller
     // func to update a specific case.
     public function update(Request $request, Cases $case)
     {
-        $validated = $this->validateData($request, $case->id);
+        try {
+            $validated = $this->validateData($request, $case->id);
 
-        DB::transaction(function () use ($case, $validated, $request) {
-            $case->update($validated);
-            $this->syncDepartments($case, $request);
-        });
+            $validated['updated_by'] = $request->input('updated_by') ?: ($request->user()?->name ?: 'Admin');
 
-        $case->load(self::$deptRelations);
-        $case->past_surgeries = $case->research['past_surgeries'] ?? [];
-        return response()->json($case);
+            unset($validated['created_by']);
+            if (!Schema::hasColumn('cases', 'updated_by')) {
+                unset($validated['updated_by']);
+            }
+
+            DB::transaction(function () use ($case, $validated, $request) {
+                $case->update($validated);
+                $this->syncDepartments($case, $request);
+            });
+
+            $case->refresh();
+            $case->load(self::$deptRelations);
+            $case->past_surgeries = $case->research['past_surgeries'] ?? [];
+            return response()->json($case);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'message' => 'Validation failed for case.',
+                'errors'  => $e->errors(),
+            ], 422);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error("Failed to update case ID {$case->id}: " . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'payload' => $request->all()
+            ]);
+            return response()->json([
+                'message' => 'Failed to update case: ' . $e->getMessage(),
+                'error'   => $e->getMessage()
+            ], 500);
+        }
     }
 
     // func to delete a case.
@@ -235,13 +334,58 @@ class CasesController extends Controller
     // validate core demographics & department payloads
     protected function validateData(Request $request, $caseId = null): array
     {
+        $numericId = null;
+        if ($caseId !== null) {
+            if ($caseId instanceof Cases) {
+                $existingCase = $caseId;
+            } else {
+                $existingCase = Cases::where('id', $caseId)->orWhere('mrn', $caseId)->first();
+            }
+
+            if ($existingCase) {
+                $numericId = $existingCase->id;
+                $fallbackMerges = [];
+                if (!$request->filled('mrn')) {
+                    $fallbackMerges['mrn'] = $existingCase->mrn;
+                }
+                if (!$request->filled('full_name')) {
+                    $fallbackMerges['full_name'] = $existingCase->full_name;
+                }
+                if (!$request->filled('gender')) {
+                    $fallbackMerges['gender'] = $existingCase->gender ?? 'male';
+                }
+                if (!empty($fallbackMerges)) {
+                    $request->merge($fallbackMerges);
+                }
+            }
+        }
+
+        // Sanitize empty strings to null for optional database columns
+        $nullableFields = [
+            'national_id', 'blood_group', 'date_of_birth', 
+            'date_of_joining_request', 'social_alarm_date',
+            'phone_number', 'government', 'outside_egypt_details',
+            'cause_of_acceptance', 'general_medical_history', 'social_notes'
+        ];
+        $merges = [];
+        foreach ($nullableFields as $field) {
+            if ($request->has($field) && trim((string)$request->input($field)) === '') {
+                $merges[$field] = null;
+            }
+        }
+        if (!empty($merges)) {
+            $request->merge($merges);
+        }
+
+        $ignoreId = $numericId !== null ? $numericId : 'NULL';
+
         $validator = Validator::make($request->all(), [
-            'mrn'                     => 'required|string|unique:cases,mrn,' . $caseId,
+            'mrn'                     => 'required|string|unique:cases,mrn,' . $ignoreId . ',id',
             'full_name'               => 'required|string|max:255',
             'gender'                  => 'required|in:male,female',
-            'national_id'             => 'nullable|string|max:14|unique:cases,national_id,' . $caseId,
+            'national_id'             => 'nullable|string|max:14|unique:cases,national_id,' . $ignoreId . ',id',
             'date_of_birth'           => 'nullable|date',
-            'age'                     => 'nullable|string',
+            'age'                     => 'nullable',
             'phone_number'            => 'nullable|string|max:50',
             'government'              => 'nullable|string',
             'outside_egypt_details'   => 'nullable|string',
@@ -260,6 +404,8 @@ class CasesController extends Controller
             'departments'             => 'nullable',
             'research'                => 'nullable|array',
             'past_surgeries'          => 'nullable',
+            'created_by'              => 'nullable|string|max:255',
+            'updated_by'              => 'nullable|string|max:255',
         ]);
 
         $data = $validator->validate();
@@ -284,7 +430,7 @@ class CasesController extends Controller
             $data['programs'] = implode("\n", array_filter($data['programs']));
         }
 
-        if ($request->has('past_surgeries')) {
+        if ($request->has('past_surgeries') || $request->filled('past_surgeries') || $request->exists('past_surgeries')) {
             $researchData = $data['research'] ?? [];
             if (!is_array($researchData)) $researchData = [];
             $pastSurgeriesInput = $request->input('past_surgeries');
@@ -293,7 +439,14 @@ class CasesController extends Controller
             }
             $researchData['past_surgeries'] = is_array($pastSurgeriesInput) ? $pastSurgeriesInput : [];
             $data['research'] = $researchData;
-            unset($data['past_surgeries']);
+        }
+        unset($data['past_surgeries']);
+        unset($data['departments']);
+        if (!Schema::hasColumn('cases', 'created_by')) {
+            unset($data['created_by']);
+        }
+        if (!Schema::hasColumn('cases', 'updated_by')) {
+            unset($data['updated_by']);
         }
         return $data;
     }
@@ -305,6 +458,7 @@ class CasesController extends Controller
     {
         $allDepts = Department::all()->keyBy('code');
         $enrolledDeptIds = [];
+        $modelColumnsCache = [];
 
         // 1. Check 'departments' payload input (e.g. from frontend apiMapper)
         if ($request->has('departments')) {
@@ -322,10 +476,21 @@ class CasesController extends Controller
                 if (!is_array($data)) continue;
 
                 $modelClass = $mapInfo['model'];
-                $modelClass::updateOrCreate(
-                    ['case_id' => $case->id],
-                    $data
-                );
+                if (!isset($modelColumnsCache[$modelClass])) {
+                    $modelColumnsCache[$modelClass] = \Illuminate\Support\Facades\Schema::getColumnListing((new $modelClass)->getTable());
+                }
+                $validCols = $modelColumnsCache[$modelClass];
+
+                // Sanitize: only include columns that physically exist in the MySQL table
+                $cleanData = array_intersect_key($data, array_flip($validCols));
+                unset($cleanData['id'], $cleanData['case_id']);
+
+                if (!empty($cleanData)) {
+                    $modelClass::updateOrCreate(
+                        ['case_id' => $case->id],
+                        $cleanData
+                    );
+                }
 
                 $isEnrolled = false;
                 if (isset($item['enrolled'])) {
@@ -348,10 +513,20 @@ class CasesController extends Controller
                     if (is_array($data) && !empty($data)) {
                         $hasEnrolledStatus = isset($data['status']) && strtolower((string)$data['status']) === 'enrolled';
                         $modelClass = $mapInfo['model'];
-                        $modelClass::updateOrCreate(
-                            ['case_id' => $case->id],
-                            $data
-                        );
+                        if (!isset($modelColumnsCache[$modelClass])) {
+                            $modelColumnsCache[$modelClass] = \Illuminate\Support\Facades\Schema::getColumnListing((new $modelClass)->getTable());
+                        }
+                        $validCols = $modelColumnsCache[$modelClass];
+
+                        $cleanData = array_intersect_key($data, array_flip($validCols));
+                        unset($cleanData['id'], $cleanData['case_id']);
+
+                        if (!empty($cleanData)) {
+                            $modelClass::updateOrCreate(
+                                ['case_id' => $case->id],
+                                $cleanData
+                            );
+                        }
                         if ($hasEnrolledStatus) {
                             $enrolledDeptIds[] = $deptMaster->id;
                         }
@@ -400,7 +575,7 @@ class CasesController extends Controller
         // Auto-enroll to Surgical List if Doctor chose the surgery procedure AND the date
         if ($surgMaster && !empty($requestedOpName) && !empty($requestedDate)) {
             $existingSurg = Dept\DeptSurgicalList::where('case_id', $case->id)->first();
-            $isAlreadyCompleted = $existingSurg && $existingSurg->stage === 'completed';
+            $isAlreadyCompleted = $existingSurg && ($existingSurg->surgical_status === 'completed' || strtolower((string)$existingSurg->status) === 'discharged');
 
             $surgUpdateData = [
                 'status' => $isAlreadyCompleted ? 'discharged' : 'enrolled',
@@ -409,9 +584,6 @@ class CasesController extends Controller
             ];
 
             if ($existingSurg) {
-                if ($isAlreadyCompleted) {
-                    $surgUpdateData['stage'] = 'completed';
-                }
                 $existingSurg->update($surgUpdateData);
             } else {
                 Dept\DeptSurgicalList::create(array_merge(['case_id' => $case->id], $surgUpdateData));
@@ -426,7 +598,7 @@ class CasesController extends Controller
 
         $surgRecord = Dept\DeptSurgicalList::where('case_id', $case->id)->first();
         if ($surgRecord && !empty($surgRecord->operation_name)) {
-            $isCompleted = $surgRecord->stage === 'completed';
+            $isCompleted = $surgRecord->surgical_status === 'completed';
             if ($isCompleted || !$hasSurgeryRequested) {
                 $surgRecord->update(['status' => 'discharged']);
                 if ($surgMaster) {
@@ -445,7 +617,7 @@ class CasesController extends Controller
             }
         }
 
-        $isCompletedStage = $surgRecord && $surgRecord->stage === 'completed';
+        $isCompletedStage = $surgRecord && $surgRecord->surgical_status === 'completed';
         $isOnSurgicalList = ($surgMaster && in_array($surgMaster->id, $enrolledDeptIds)) || 
                             ($surgRecord && strtolower((string)$surgRecord->status) === 'enrolled' && !$isCompletedStage && $hasSurgeryRequested);
 
@@ -481,7 +653,7 @@ class CasesController extends Controller
         $anesLatest = Dept\DeptAnesthesia::where('case_id', $case->id)->first();
         if ($surgLatest) {
             $computedStatus = 'waiting_anesthesia_confirm';
-            $isCompleted = $surgLatest->stage === 'completed' || strtolower((string)$surgLatest->status) === 'discharged';
+            $isCompleted = $surgLatest->surgical_status === 'completed' || strtolower((string)$surgLatest->status) === 'discharged';
 
             if ($isCompleted) {
                 $computedStatus = 'completed';

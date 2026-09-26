@@ -42,18 +42,10 @@ const DEPARTMENTS = [
 					<option value="spine_tumor_neural">Intraspinal / Neural Tumor</option>
 					<option value="spondylodiscitis">Spondylodiscitis / Osteomyelitis</option>
 				</optgroup>
-				<optgroup label="Other">
-					<option value="other">Other / Unlisted Diagnosis</option>
-				</optgroup>
 			</select>
 			  </div><div class="form-group"><label>Decision for Surgery</label><select id="spin_opDecided"><option value="no">Not Yet</option><option value="yes">Yes — Decided</option></select></div></div>
               
-              <div id="spin_otherConditionWrapper" class="conditional-section hidden" style="margin-top: 0.5rem; border-left-color: #E67E22;">
-                  <div class="form-group" style="margin-bottom: 0;">
-                      <label style="color: #E67E22;">Specify Other Diagnosis *</label>
-                      <input type="text" id="spin_conditionOther" placeholder="Type the exact diagnosis here...">
-                  </div>
-              </div>`,
+`,
               customGates: `<div class="gate-item"><label>3D CT Done?</label><select id="spin_ctDone"><option value="pending">Pending</option><option value="yes">Done / Yes</option><option value="no">Not Done / No</option></select></div><div class="gate-item"><label>MRI Present?</label><select id="spin_mriPresent"><option value="no">No</option><option value="yes">Yes</option></select></div><div class="gate-item"><label>Final Preop ECHO</label><select id="spin_echoDone"><option value="pending">Pending</option><option value="done">Done</option><option value="not_needed">Not needed</option></select></div><div class="gate-item"><label>Hardware/Implant Available?</label><select id="spin_hardware"><option value="pending">Pending</option><option value="ordered">Ordered</option><option value="available">Available</option></select></div><div class="gate-item"><label>Intraop Neuro Monitoring?</label><select id="spin_neuroMonitor"><option value="not_needed">Not Needed</option><option value="pending">Pending</option><option value="confirmed">Confirmed</option></select></div>` 
             },
             { code: 'hopb', label: 'HOPBE Program', color: '#1ABC9C', pfx: 'hop', 
@@ -66,17 +58,9 @@ const DEPARTMENTS = [
                     <option value="epispadias_female">Epispadias (Female)</option>
                     <option value="exstrophy_variant">Exstrophy Variant / Pseudoexstrophy</option>
                 </optgroup>
-                <optgroup label="Other">
-                    <option value="other">Other / Unlisted Diagnosis</option>
-                </optgroup>
               </select></div></div>
               
-              <div id="hop_otherConditionWrapper" class="conditional-section hidden" style="margin-top: 0.5rem; border-left-color: #1ABC9C;">
-                  <div class="form-group" style="margin-bottom: 0;">
-                      <label style="color: #1ABC9C;">Specify Other Diagnosis *</label>
-                      <input type="text" id="hop_conditionOther" placeholder="Type the exact diagnosis here...">
-                  </div>
-              </div>`,
+`,
 			  customGates: `<div class="gate-item"><label>Osteotomy Status</label><select id="hop_osteotomy"><option value="not_needed">Not Needed</option><option value="pending">Required & Pending Ortho Consult</option><option value="notified">Required & Ortho Notified</option></select></div>`
 			  },
             { code: 'hi', label: 'Cardiac Congenital', color: '#E74C3C', 
@@ -123,19 +107,13 @@ const DEPARTMENTS = [
 						<option value="kawasaki">Kawasaki Disease (Coronary Aneurysm)</option>
 					</optgroup>
 					
-					<optgroup label="Electrophysiology & Other">
+					<optgroup label="Electrophysiology">
 						<option value="arrhythmia">Arrhythmia / Congenital Heart Block</option>
-						<option value="other">Other / Unlisted Diagnosis</option>
 					</optgroup>
 				</select>
 			  </div><div class="form-group"><label>Intervention Category</label><select id="hi_interventionType"><option value="open_heart">Open Heart Surgery</option><option value="cath">Cardiac Catheterization</option></select></div></div>
               
-              <div id="hi_otherConditionWrapper" class="conditional-section hidden" style="margin-top: 0.5rem; border-left-color: #E74C3C;">
-                  <div class="form-group" style="margin-bottom: 0;">
-                      <label style="color: #E74C3C;">Specify Other Diagnosis *</label>
-                      <input type="text" id="hi_conditionOther" placeholder="Type the exact diagnosis here...">
-                  </div>
-              </div>`,
+`,
               customGates: `<div class="gate-item"><label>Blood Group</label><input type="text" id="hi_bloodGroup" disabled style="background:rgba(0,0,0,0.05); font-weight:bold; border-color:transparent; color: var(--text-primary);" placeholder="Awaiting Demographics"></div><div class="gate-item"><label>Final Preop ECHO</label><select id="hi_echoRecent"><option value="pending">Pending</option><option value="done">Done</option><option value="not_needed">Not needed</option></select></div><div class="gate-item"><label>Cardiac CT / MRI?</label><select id="hi_ctMri"><option value="pending">Pending</option><option value="not_needed">Not needed</option><option value="done">Done</option></select></div><div class="gate-item"><label>Perfusionist Confirmed?</label><select id="hi_perfusionist"><option value="not_needed">Not Needed</option><option value="no">No</option><option value="yes">Yes</option></select></div>`
             },
             { code: 'cprp', label: 'Colorectal & Pelvic', color: '#9B59B6', 
@@ -173,19 +151,13 @@ const DEPARTMENTS = [
                     <option value="rectal_polyp">Rectal Polyp</option>
                     <option value="fecal_incontinence">Severe Constipation / Fecal Incontinence</option>
                 </optgroup>
-                <optgroup label="Other">
+                <optgroup label="Post-Op & Redo">
                     <option value="colostomy_closure">Status Post Colostomy (For Closure)</option>
                     <option value="redo_surgery">Complications / Redo Surgery</option>
-                    <option value="other">Other / Unlisted Diagnosis</option>
                 </optgroup>
               </select></div><div class="form-group"><label>Continence Status</label><select id="cprp_continence"><option value="">— Select —</option><option value="normal">Normal Continence</option><option value="impaired">Impaired / Soiling</option><option value="incontinent">Totally Incontinent</option><option value="stoma">Stoma Dependent</option></select></div></div>
               
-              <div id="cprp_otherConditionWrapper" class="conditional-section hidden" style="margin-top: 0.5rem; border-left-color: #9B59B6;">
-                  <div class="form-group" style="margin-bottom: 0;">
-                      <label style="color: #8E44AD;">Specify Other Diagnosis *</label>
-                      <input type="text" id="cprp_conditionOther" placeholder="Type the exact diagnosis here...">
-                  </div>
-              </div>`
+`
             },
             { code: 'orth', label: 'Orthopedic Surgery', color: '#2ECC71', 
               customForm: `<div class="form-grid three"><div class="form-group"><label>First Clinic Visit</label><input type="date" id="orth_visit"></div><div class="form-group"><label>Primary Diagnosis</label><select id="orth_condition">
@@ -233,9 +205,6 @@ const DEPARTMENTS = [
                     <option value="osteochondroma">Osteochondroma / MHE</option>
                     <option value="tumor_malignant">Malignant Bone Tumor</option>
                 </optgroup>
-                <optgroup label="Other">
-                    <option value="other">Other / Unlisted Condition</option>
-                </optgroup>
               </select></div><div class="form-group"><label>Limb / Side Affected</label><select id="orth_limbAffected">
                 <option value="">— Select Area —</option>
                 <optgroup label="Single Limb">
@@ -258,12 +227,6 @@ const DEPARTMENTS = [
                 </optgroup>
               </select></div></div>
               
-              <div id="orth_otherConditionWrapper" class="conditional-section hidden" style="margin-top: 0.5rem; border-left-color: #2ECC71;">
-                  <div class="form-group" style="margin-bottom: 0;">
-                      <label style="color: var(--info);">Specify Other Condition *</label>
-                      <input type="text" id="orth_conditionOther" placeholder="Type the exact diagnosis here...">
-                  </div>
-              </div>
               
               <div id="orth_otherLimbWrapper" class="conditional-section hidden" style="margin-top: 0.5rem; border-left-color: #9B59B6; background-color: #F5EEF8;">
                   <div class="form-group" style="margin-bottom: 0;">
@@ -282,12 +245,14 @@ const DEPARTMENTS = [
 						<option value="hydrocephalus_post">Post-Hemorrhagic / Post-Infectious Hydrocephalus</option>
 						<option value="arachnoid_cyst">Arachnoid Cyst</option>
 						<option value="dandy_walker">Dandy-Walker Malformation</option>
+						<option value="iih">Idiopathic Intracranial Hypertension (IIH)</option>
 					</optgroup>
 					<optgroup label="Congenital & Dysraphism">
 						<option value="encephalocele">Encephalocele</option>
 						<option value="chiari">Chiari Malformation (Type I / II)</option>
 						<option value="craniosynostosis">Craniosynostosis (Single / Multi-suture)</option>
 						<option value="spina_bifida">Spina Bifida / MMC</option>
+						<option value="occipital_porencephalic_cyst">Occipital Porencephalic Cyst</option>
 					</optgroup>
 					<optgroup label="Tumors & Vascular">
 						<option value="brain_tumor">Brain Tumor (Medulloblastoma, Astrocytoma, etc.)</option>
@@ -300,17 +265,8 @@ const DEPARTMENTS = [
 						<option value="spasticity">Spasticity (SDR / Baclofen Pump)</option>
 						<option value="tbi_skull_fx">Pediatric TBI / Skull Fracture</option>
 					</optgroup>
-					<optgroup label="Other">
-						<option value="other">Other / Unlisted Diagnosis</option>
-					</optgroup>
 				</select>
-			  </div></div>
-              <div id="neur_otherConditionWrapper" class="conditional-section hidden" style="margin-top: 0.5rem; border-left-color: #3498DB;">
-                  <div class="form-group" style="margin-bottom: 0;">
-                      <label style="color: #3498DB;">Specify Other Diagnosis *</label>
-                      <input type="text" id="neur_conditionOther" placeholder="Type the exact diagnosis here...">
-                  </div>
-              </div>`
+			  </div></div>`
             },
             { code: 'urol', label: 'Urology Surgery', color: '#F39C12', 
               customForm: `<div class="form-grid three"><div class="form-group"><label>First Clinic Visit</label><input type="date" id="urol_visit"></div><div class="form-group"><label>Primary Diagnosis</label>
@@ -340,19 +296,13 @@ const DEPARTMENTS = [
 						<option value="hydrocele_varicocele">Hydrocele / Varicocele / Torsion</option>
 					</optgroup>
 					
-					<optgroup label="Tumors & Other">
+					<optgroup label="Tumors">
 						<option value="wilms_tumor">Wilms Tumor / Renal Mass</option>
 						<option value="rhabdomyosarcoma">Rhabdomyosarcoma (Genitourinary)</option>
-						<option value="other">Other / Unlisted Diagnosis</option>
 					</optgroup>
 				</select>
 			  </div></div>
-              <div id="urol_otherConditionWrapper" class="conditional-section hidden" style="margin-top: 0.5rem; border-left-color: #F39C12;">
-                  <div class="form-group" style="margin-bottom: 0;">
-                      <label style="color: #F39C12;">Specify Other Diagnosis *</label>
-                      <input type="text" id="urol_conditionOther" placeholder="Type the exact diagnosis here...">
-                  </div>
-              </div>`
+`
             },
             { code: 'ent', label: 'ENT & Airway', color: '#1ABC9C', 
               customForm: `<div class="form-grid three"><div class="form-group"><label>First Clinic Visit</label><input type="date" id="ent_visit"></div><div class="form-group"><label>Primary Diagnosis</label><select id="ent_condition">
@@ -380,17 +330,9 @@ const DEPARTMENTS = [
                     <option value="adenotonsillar">Adenotonsillar Hypertrophy</option>
                     <option value="tongue_tie">Ankyloglossia (Tongue Tie)</option>
                 </optgroup>
-                <optgroup label="Other">
-                    <option value="other">Other / Unlisted Diagnosis</option>
-                </optgroup>
               </select></div><div class="form-group"><label>Tracheostomy Status</label><select id="ent_trachStatus"><option value="none">None</option><option value="in_situ">In Situ</option><option value="decannulated">Decannulated</option></select></div></div>
               
-              <div id="ent_otherConditionWrapper" class="conditional-section hidden" style="margin-top: 0.5rem; border-left-color: #1ABC9C;">
-                  <div class="form-group" style="margin-bottom: 0;">
-                      <label style="color: #1ABC9C;">Specify Other Diagnosis *</label>
-                      <input type="text" id="ent_conditionOther" placeholder="Type the exact diagnosis here...">
-                  </div>
-              </div>`
+`
             },
             { code: 'gps', label: 'General Pediatric Surgery', color: '#E67E22', 
               customForm: `<div class="form-grid three"><div class="form-group"><label>First Clinic Visit</label><input type="date" id="gps_visit"></div><div class="form-group"><label>Primary Diagnosis</label>
@@ -435,21 +377,13 @@ const DEPARTMENTS = [
 					<option value="sct">Sacrococcygeal Teratoma (SCT)</option>
 				</optgroup>
 				
-				<optgroup label="Other">
-					<option value="other">Other / Unlisted Diagnosis</option>
-				</optgroup>
 			</select>
 			  
 			  </div></div>
               
-              <div id="gps_otherConditionWrapper" class="conditional-section hidden" style="margin-top: 0.5rem; border-left-color: #E67E22;">
-                  <div class="form-group" style="margin-bottom: 0;">
-                      <label style="color: #E67E22;">Specify Other Diagnosis *</label>
-                      <input type="text" id="gps_conditionOther" placeholder="Type the exact diagnosis here...">
-                  </div>
-              </div>`
+`
             },
-            { code: 'maxf', label: 'Maxillofacial Surgery', color: '#8E44AD', 
+            { code: 'maxf', label: 'Maxillofacial congenital surgeries', color: '#8E44AD', 
               customForm: `<div class="form-grid three"><div class="form-group"><label>First Clinic Visit</label><input type="date" id="maxf_visit"></div><div class="form-group"><label>Primary Diagnosis</label><select id="maxf_condition">
                 <option value="">— Select Diagnosis —</option>
                 <optgroup label="Clefts">
@@ -472,17 +406,9 @@ const DEPARTMENTS = [
                     <option value="facial_trauma">Facial Trauma / Fracture</option>
                     <option value="jaw_tumor">Mandibular / Maxillary Cyst or Tumor</option>
                 </optgroup>
-                <optgroup label="Other">
-                    <option value="other">Other / Unlisted Diagnosis</option>
-                </optgroup>
               </select></div></div>
               
-              <div id="maxf_otherConditionWrapper" class="conditional-section hidden" style="margin-top: 0.5rem; border-left-color: #8E44AD;">
-                  <div class="form-group" style="margin-bottom: 0;">
-                      <label style="color: #8E44AD;">Specify Other Diagnosis *</label>
-                      <input type="text" id="maxf_conditionOther" placeholder="Type the exact diagnosis here...">
-                  </div>
-              </div>`
+`
             },
             { code: 'recon', label: 'Reconstructive Surgery', color: '#E91E63', 
               customForm: `<div class="form-grid three"><div class="form-group"><label>First Clinic Visit</label><input type="date" id="recon_visit"></div><div class="form-group"><label>Primary Condition</label><select id="recon_condition">
@@ -496,23 +422,17 @@ const DEPARTMENTS = [
                     <option value="vascular_anomaly">Vascular Anomaly / Hemangioma</option>
                     <option value="congenital_nevus">Giant Congenital Nevus</option>
                     <option value="ear_anomaly">Microtia / Prominent Ear</option>
+                    <option value="polydactyly">Polydactyly</option>
+                    <option value="syndactyly">Syndactyly</option>
                 </optgroup>
                 <optgroup label="Trauma & Soft Tissue">
                     <option value="soft_tissue_loss">Soft Tissue Defect / Loss</option>
                     <option value="facial_trauma">Facial Trauma Reconstruction</option>
                     <option value="nerve_injury">Peripheral Nerve Injury</option>
                 </optgroup>
-                <optgroup label="Other">
-                    <option value="other">Other / Unlisted Condition</option>
-                </optgroup>
               </select></div></div>
               
-              <div id="recon_otherConditionWrapper" class="conditional-section hidden" style="margin-top: 0.5rem; border-left-color: #E91E63;">
-                  <div class="form-group" style="margin-bottom: 0;">
-                      <label style="color: #E91E63;">Specify Other Condition *</label>
-                      <input type="text" id="recon_conditionOther" placeholder="Type the exact condition here...">
-                  </div>
-              </div>`
+`
             },
             { code: 'abci', label: 'ABCI (Cochlear Implant)', color: '#34495E', 
               customForm: `<div class="form-grid three"><div class="form-group"><label>First Clinic Visit</label><input type="date" id="abci_visit"></div><div class="form-group"><label>Primary Diagnosis</label><select id="abci_condition">
@@ -527,17 +447,9 @@ const DEPARTMENTS = [
                     <option value="cochlear_anomaly">Congenital Cochlear Anomaly</option>
                     <option value="post_meningitis">Post-Meningitis Ossification</option>
                 </optgroup>
-                <optgroup label="Other">
-                    <option value="other">Other / Unlisted Diagnosis</option>
-                </optgroup>
               </select></div></div>
               
-              <div id="abci_otherConditionWrapper" class="conditional-section hidden" style="margin-top: 0.5rem; border-left-color: #34495E;">
-                  <div class="form-group" style="margin-bottom: 0;">
-                      <label style="color: #34495E;">Specify Other Diagnosis *</label>
-                      <input type="text" id="abci_conditionOther" placeholder="Type the exact diagnosis here...">
-                  </div>
-              </div>`
+`
             },
             { code: 'hope', label: 'Hope Start (Prenatal)', color: '#F1C40F', 
               customForm: `<div class="form-grid three"><div class="form-group"><label>Prenatal Consult Date</label><input type="date" id="hope_visit"></div><div class="form-group"><label>Fetal Diagnosis</label><select id="hope_condition">
@@ -565,17 +477,9 @@ const DEPARTMENTS = [
                 <optgroup label="Multiple Gestation">
                     <option value="fetal_ttts">TTTS / TRAP Sequence</option>
                 </optgroup>
-                <optgroup label="Other">
-                    <option value="other">Other Fetal Anomaly</option>
-                </optgroup>
               </select></div><div class="form-group"><label>Gestational Age at Consult (Weeks)</label><input type="number" id="hope_gestationalAge" placeholder="e.g., 24" min="0"></div></div>
               
-              <div id="hope_otherConditionWrapper" class="conditional-section hidden" style="margin-top: 0.5rem; border-left-color: #F1C40F;">
-                  <div class="form-group" style="margin-bottom: 0;">
-                      <label style="color: #D4AC0D;">Specify Other Fetal Diagnosis *</label>
-                      <input type="text" id="hope_conditionOther" placeholder="Type the exact fetal diagnosis here...">
-                  </div>
-              </div>`
+`
             },
             { code: 'hypo', label: 'Hypospadias Clinic', color: '#16A085', 
               customForm: `<div class="form-grid three"><div class="form-group"><label>First Clinic Visit</label><input type="date" id="hypo_visit"></div><div class="form-group"><label>Hypospadias Type</label><select id="hypo_condition">
@@ -595,20 +499,14 @@ const DEPARTMENTS = [
                     <option value="scrotal">Scrotal</option>
                     <option value="perineal">Perineal</option>
                 </optgroup>
-                <optgroup label="Complications & Other">
+                <optgroup label="Complications">
                     <option value="fistula">Urethrocutaneous Fistula (Post-op)</option>
                     <option value="stricture">Urethral Stricture / Stenosis</option>
                     <option value="chordee_only">Chordee Without Hypospadias</option>
-                    <option value="other">Other / Complex Redo</option>
                 </optgroup>
               </select></div></div>
               
-              <div id="hypo_otherConditionWrapper" class="conditional-section hidden" style="margin-top: 0.5rem; border-left-color: #16A085;">
-                  <div class="form-group" style="margin-bottom: 0;">
-                      <label style="color: #16A085;">Specify Other Type/Complication *</label>
-                      <input type="text" id="hypo_conditionOther" placeholder="Type details here...">
-                  </div>
-              </div>`
+`
             },
             { code: 'sbif', label: 'Spina Bifida Clinic', color: '#2980B9', 
               customForm: `<div class="form-grid three"><div class="form-group"><label>First Clinic Visit</label><input type="date" id="sbif_visit"></div><div class="form-group"><label>Primary Lesion Level</label><select id="sbif_condition">
@@ -619,18 +517,12 @@ const DEPARTMENTS = [
                     <option value="lumbar">Lumbar</option>
                     <option value="sacral">Sacral</option>
                 </optgroup>
-                <optgroup label="Other Diagnostics">
+                <optgroup label="Closed Defects">
                     <option value="lipomeningocele">Lipomeningocele (Closed Defect)</option>
-                    <option value="other">Other / Unlisted Diagnosis</option>
                 </optgroup>
               </select></div><div class="form-group"><label>Shunt Status</label><select id="sbif_shunt"><option value="none">No Shunt</option><option value="vp_shunt">VP Shunt Present</option><option value="etv">ETV Done</option></select></div></div>
               
-              <div id="sbif_otherConditionWrapper" class="conditional-section hidden" style="margin-top: 0.5rem; border-left-color: #2980B9;">
-                  <div class="form-group" style="margin-bottom: 0;">
-                      <label style="color: #2980B9;">Specify Other Diagnosis *</label>
-                      <input type="text" id="sbif_conditionOther" placeholder="Type the exact diagnosis here...">
-                  </div>
-              </div>`
+`
             },
             { code: 'ndev', label: 'Neurodevelopmental', color: '#8E44AD', 
               customForm: `<div class="form-grid three"><div class="form-group"><label>First Clinic Visit</label><input type="date" id="ndev_visit"></div><div class="form-group"><label>Primary Condition</label><select id="ndev_condition">
@@ -646,17 +538,9 @@ const DEPARTMENTS = [
                     <option value="hypotonia">Central Hypotonia</option>
                     <option value="genetic_syndrome">Genetic / Chromosomal Syndrome</option>
                 </optgroup>
-                <optgroup label="Other">
-                    <option value="other">Other / Unlisted Condition</option>
-                </optgroup>
               </select></div></div>
               
-              <div id="ndev_otherConditionWrapper" class="conditional-section hidden" style="margin-top: 0.5rem; border-left-color: #8E44AD;">
-                  <div class="form-group" style="margin-bottom: 0;">
-                      <label style="color: #8E44AD;">Specify Other Condition *</label>
-                      <input type="text" id="ndev_conditionOther" placeholder="Type the exact condition here...">
-                  </div>
-              </div>`
+`
             },
             { code: 'livt', label: 'Liver Transplant', color: '#D35400', 
               customForm: `<div class="form-grid three"><div class="form-group"><label>First Clinic Visit</label><input type="date" id="livt_visit"></div><div class="form-group"><label>Primary Diagnosis</label><select id="livt_condition">
@@ -665,31 +549,28 @@ const DEPARTMENTS = [
                     <option value="biliary_atresia">Biliary Atresia</option>
                     <option value="pfi_cholestasis">PFIC</option>
                     <option value="alagille">Alagille Syndrome</option>
+                    <option value="congenital_hepatic_fibrosis">Congenital Hepatic Fibrosis</option>
                 </optgroup>
                 <optgroup label="Metabolic & Genetic">
                     <option value="wilson">Wilson Disease</option>
                     <option value="alpha1">Alpha-1 Antitrypsin Deficiency</option>
                     <option value="glycogen_storage">Glycogen Storage Disease</option>
+                    <option value="maple_syrup_urine_disease">Maple Syrup Urine Disease</option>
                 </optgroup>
                 <optgroup label="Hepatic Tumors">
                     <option value="hepatoblastoma">Hepatoblastoma</option>
                     <option value="hcc">Hepatocellular Carcinoma (HCC)</option>
                 </optgroup>
-                <optgroup label="Failure & Other">
+                <optgroup label="Failure">
                     <option value="alf">Acute Liver Failure (ALF)</option>
                     <option value="cirrhosis">End-Stage Liver Disease / Cirrhosis</option>
-                    <option value="other">Other / Unlisted Diagnosis</option>
+                    <option value="autoimmune_hepatitis">Autoimmune Hepatitis</option>
                 </optgroup>
-              </select></div></div>
+              </select></div><div class="form-group"><label>Donner</label><input type="text" id="livt_donner" placeholder="Enter donner details..."></div></div>
               
-              <div id="livt_otherConditionWrapper" class="conditional-section hidden" style="margin-top: 0.5rem; border-left-color: #D35400;">
-                  <div class="form-group" style="margin-bottom: 0;">
-                      <label style="color: #D35400;">Specify Other Diagnosis *</label>
-                      <input type="text" id="livt_conditionOther" placeholder="Type the exact diagnosis here...">
-                  </div>
-              </div>`
+`
             },
-            { code: 'dent', label: 'Dental & Maxillofacial', color: '#7F8C8D', 
+            { code: 'dent', label: 'Dental surgery', color: '#7F8C8D', 
               customForm: `<div class="form-grid three"><div class="form-group"><label>First Clinic Visit</label><input type="date" id="dent_visit"></div><div class="form-group"><label>Primary Condition</label><select id="dent_condition">
                 <option value="">— Select Condition —</option>
                 <optgroup label="Restorative & Caries">
@@ -707,17 +588,9 @@ const DEPARTMENTS = [
                     <option value="supernumerary">Supernumerary / Impacted Teeth</option>
                     <option value="abscess">Dental Abscess / Cellulitis</option>
                 </optgroup>
-                <optgroup label="Other">
-                    <option value="other">Other / Unlisted Condition</option>
-                </optgroup>
               </select></div></div>
               
-              <div id="dent_otherConditionWrapper" class="conditional-section hidden" style="margin-top: 0.5rem; border-left-color: #7F8C8D;">
-                  <div class="form-group" style="margin-bottom: 0;">
-                      <label style="color: #7F8C8D;">Specify Other Condition *</label>
-                      <input type="text" id="dent_conditionOther" placeholder="Type the exact condition here...">
-                  </div>
-              </div>`
+`
             }
         ];
 

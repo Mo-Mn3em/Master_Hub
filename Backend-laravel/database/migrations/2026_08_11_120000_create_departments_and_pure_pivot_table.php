@@ -30,7 +30,7 @@ return new class extends Migration
             ['code' => 'urol', 'name' => 'Urology Surgery',           'color' => '#F39C12', 'pfx' => 'urol'],
             ['code' => 'ent',  'name' => 'ENT & Airway',              'color' => '#1ABC9C', 'pfx' => 'ent'],
             ['code' => 'gps',  'name' => 'General Pediatric Surgery', 'color' => '#E67E22', 'pfx' => 'gps'],
-            ['code' => 'maxf', 'name' => 'Maxillofacial Surgery',     'color' => '#8E44AD', 'pfx' => 'maxf'],
+            ['code' => 'maxf', 'name' => 'Maxillofacial congenital surgeries', 'color' => '#8E44AD', 'pfx' => 'maxf'],
             ['code' => 'recon', 'name' => 'Reconstructive Surgery',   'color' => '#E91E63', 'pfx' => 'recon'],
             ['code' => 'abci', 'name' => 'ABCI (Cochlear Implant)',   'color' => '#34495E', 'pfx' => 'abci'],
             ['code' => 'hope', 'name' => 'Hope Start (Prenatal)',     'color' => '#F1C40F', 'pfx' => 'hope'],
@@ -38,7 +38,7 @@ return new class extends Migration
             ['code' => 'sbif', 'name' => 'Spina Bifida Clinic',       'color' => '#2980B9', 'pfx' => 'sbif'],
             ['code' => 'ndev', 'name' => 'Neurodevelopmental',      'color' => '#8E44AD', 'pfx' => 'ndev'],
             ['code' => 'livt', 'name' => 'Liver Transplant',          'color' => '#D35400', 'pfx' => 'livt'],
-            ['code' => 'dent', 'name' => 'Dental & Maxillofacial',    'color' => '#7F8C8D', 'pfx' => 'dent'],
+            ['code' => 'dent', 'name' => 'Dental surgery',            'color' => '#7F8C8D', 'pfx' => 'dent'],
             ['code' => 'surg', 'name' => 'Surgical List',             'color' => '#C0392B', 'pfx' => 'surg'],
         ];
 

@@ -78,6 +78,8 @@ export interface BackendCase {
   clinic_liver_transplant?: Record<string, any> | null;
   clinic_surgical_list?: Record<string, any> | null;
 
+  created_by?: string | null;
+  updated_by?: string | null;
   research?: any;
   created_at?: string;
   updated_at?: string;
@@ -101,14 +103,14 @@ const DEPTS: DeptConfig[] = [
   { code: 'urol', label: 'Urology Surgery',         pfx: 'urol', relation: 'dept_urology',             legacyColumn: 'clinic_urology' },
   { code: 'ent',  label: 'ENT & Airway',            pfx: 'ent',  relation: 'dept_ent',                 legacyColumn: 'clinic_ent' },
   { code: 'gps',  label: 'General Pediatric Surgery', pfx: 'gps', relation: 'dept_general_surgery',  legacyColumn: 'clinic_general_surgery' },
-  { code: 'maxf', label: 'Maxillofacial Surgery',   pfx: 'maxf', relation: 'dept_maxillofacial',       legacyColumn: 'clinic_maxillofacial' },
+  { code: 'maxf', label: 'Maxillofacial congenital surgeries', pfx: 'maxf', relation: 'dept_maxillofacial', legacyColumn: 'clinic_maxillofacial' },
   { code: 'recon', label: 'Reconstructive Surgery',  pfx: 'recon', relation: 'dept_reconstructive',     legacyColumn: 'clinic_reconstructive' },
   { code: 'abci', label: 'ABCI (Cochlear Implant)', pfx: 'abci', relation: 'dept_abci',                legacyColumn: 'clinic_abci' },
   { code: 'hopb', label: 'HOPBE Program',           pfx: 'hop',  relation: 'dept_hopbe',               legacyColumn: 'clinic_hopbe' },
   { code: 'hypo', label: 'Hypospadias Clinic',      pfx: 'hypo', relation: 'dept_hypospadias',         legacyColumn: 'clinic_hypospadias' },
   { code: 'sbif', label: 'Spina Bifida Clinic',     pfx: 'sbif', relation: 'dept_spina_bifida',         legacyColumn: 'clinic_spina_bifida' },
   { code: 'ndev', label: 'Neurodevelopmental',    pfx: 'ndev', relation: 'dept_neurodevelopmental',  legacyColumn: 'clinic_neurodevelopmental' },
-  { code: 'dent', label: 'Dental',                  pfx: 'dent', relation: 'dept_dental',              legacyColumn: 'clinic_dental' },
+  { code: 'dent', label: 'Dental surgery',          pfx: 'dent', relation: 'dept_dental',              legacyColumn: 'clinic_dental' },
   { code: 'hope', label: 'Hope Start (Prenatal)',   pfx: 'hope', relation: 'dept_hope_start',          legacyColumn: 'clinic_hope_start' },
   { code: 'livt', label: 'Liver Transplant',        pfx: 'livt', relation: 'dept_liver_transplant',     legacyColumn: 'clinic_liver_transplant' },
   { code: 'surg', label: 'Surgical List',           pfx: 'surg', relation: 'dept_surgical_list',       legacyColumn: 'clinic_surgical_list' },
@@ -203,6 +205,7 @@ const getFieldMappings = (code: string, pfx: string): Record<string, string> => 
     livtPrepAlarmDate: 'prep_alarm_date',
     livtPrepAlarmNote: 'prep_alarm_note',
     livtPrepPriority: 'prep_alarm_priority',
+    donner: 'donner',
     anesFeedback: 'anesthesia_feedback',
     approvedDate: 'approved_date',
   };
@@ -234,6 +237,14 @@ function mapColumnToProg(colData: Record<string, any>, mappings: Record<string, 
     enrolled: colData.status === 'enrolled' || colData.enrolled === true,
     status: colData.status || 'enrolled',
   };
+
+  // Support dental legacy primary_condition and condition_other fields
+  if (colData.primary_condition && !colData.primary_diagnosis) {
+    progData.condition = colData.primary_condition;
+  }
+  if (colData.condition_other && !colData.diagnosis_other) {
+    progData.conditionOther = colData.condition_other;
+  }
 
   Object.entries(colData).forEach(([key, val]) => {
     if (key === 'enrolled' || key === 'status' || key === 'id' || key === 'case_id' || val === undefined || val === null) return;
@@ -282,6 +293,8 @@ export function patientToApi(patient: Partial<Patient>): BackendCase {
       surg_completed_date: patient.programs?.surg?.completedDate || null,
     },
     past_surgeries: patient.pastSurgeries || [],
+    created_by: patient.createdBy || null,
+    updated_by: patient.updatedBy || null,
     departments: [],
   };
 
@@ -352,7 +365,9 @@ export function caseFromApi(caseData: BackendCase): Patient {
     pastSurgeries: pastSurgeriesList,
     research: typeof caseData.research === 'object' && caseData.research !== null ? caseData.research : {},
     createdAt: caseData.created_at,
+    createdBy: caseData.created_by || undefined,
     updatedAt: caseData.updated_at,
+    updatedBy: caseData.updated_by || undefined,
     programs: {},
   };
 

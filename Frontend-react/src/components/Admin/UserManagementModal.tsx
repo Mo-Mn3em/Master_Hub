@@ -28,7 +28,7 @@ interface UserManagementModalProps {
 }
 
 export const UserManagementModal: React.FC<UserManagementModalProps> = ({ isOpen, onClose }) => {
-  const { currentUser } = useApp();
+  const { currentUser, logout } = useApp();
   const [users, setUsers] = useState<UserAccount[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -60,7 +60,12 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({ isOpen
       const data = await fetchUsersApi();
       setUsers(data);
     } catch (err: any) {
-      setError(err.message || 'Failed to load users.');
+      const msg = err.message || '';
+      if (msg === 'Unauthenticated.' || msg.toLowerCase().includes('unauthenticated') || msg.toLowerCase().includes('session has expired')) {
+        setError('Your administrator session has expired or is unauthenticated. Please sign in again.');
+      } else {
+        setError(msg || 'Failed to load users.');
+      }
     } finally {
       setLoading(false);
     }
@@ -244,7 +249,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({ isOpen
 
   return (
     <div className="app-modal-overlay" onClick={onClose}>
-      <div className="app-modal-window" style={{ maxWidth: 940 }} onClick={(e) => e.stopPropagation()}>
+      <div className="app-modal-window" style={{ maxWidth: 940, maxHeight: '90vh' }} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="app-modal-header">
           <div className="app-modal-header-left">
@@ -272,14 +277,37 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({ isOpen
         {(error || success) && (
           <div style={{ padding: '16px 24px 0' }}>
             {error && (
-              <div className="modal-alert-error">
+              <div className="modal-alert-error" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <AlertCircle style={{ width: 16, height: 16, flexShrink: 0 }} />
                   <span>{error}</span>
                 </div>
-                <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#991b1b' }}>
-                  <X style={{ width: 14, height: 14 }} />
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {(error.toLowerCase().includes('unauthenticated') || error.toLowerCase().includes('expired')) && (
+                    <button
+                      onClick={() => {
+                        onClose();
+                        logout();
+                      }}
+                      style={{
+                        padding: '4px 12px',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        background: '#dc2626',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: 6,
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      Sign In Again
+                    </button>
+                  )}
+                  <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#991b1b' }}>
+                    <X style={{ width: 14, height: 14 }} />
+                  </button>
+                </div>
               </div>
             )}
             {success && (
@@ -571,9 +599,9 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({ isOpen
               <p style={{ fontSize: 13, fontWeight: 600 }}>Loading system users...</p>
             </div>
           ) : filteredUsers.length > 0 ? (
-            <div className="modal-table-container">
+            <div className="modal-table-container" style={{ maxHeight: 'calc(90vh - 280px)', minHeight: 320, overflowY: 'auto' }}>
               <table className="modal-table">
-                <thead>
+                <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: '#f1f5f9' }}>
                   <tr>
                     <th>User</th>
                     <th>Role</th>

@@ -15,6 +15,7 @@ function checkUnauthorized(response: Response) {
     clearToken();
     localStorage.removeItem('master_hub_user_account');
     localStorage.removeItem('master_hub_user');
+    localStorage.removeItem('master_hub_expires_at');
     window.dispatchEvent(new CustomEvent('auth:unauthorized'));
     throw new Error('Your session has expired or is unauthenticated. Please log in again.');
   }
@@ -44,7 +45,37 @@ export async function loginApi(username: string, password: string): Promise<User
 
   const data = await response.json();
   setToken(data.token);
+  if (data.expires_at) {
+    localStorage.setItem('master_hub_expires_at', String(new Date(data.expires_at).getTime()));
+  }
   return data.user;
+}
+
+export async function fetchCurrentUserApi(): Promise<UserAccount | null> {
+  const token = getToken();
+  if (!token) return null;
+
+  try {
+    const response = await fetch(`${API_BASE}/user`, {
+      headers: authHeaders(),
+    });
+
+    if (response.status === 401) {
+      clearToken();
+      localStorage.removeItem('master_hub_user_account');
+      localStorage.removeItem('master_hub_user');
+      localStorage.removeItem('master_hub_expires_at');
+      window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+      return null;
+    }
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    return data;
+  } catch (e) {
+    return null;
+  }
 }
 
 export async function changePasswordApi(
@@ -203,8 +234,24 @@ export async function updateCaseApi(id: string, patient: Partial<Patient>): Prom
   });
 
   if (!response.ok) {
-    const errData = await response.json().catch(() => ({}));
-    throw new Error(errData.message || `Failed to update case: ${response.statusText}`);
+    let errorMessage = `Failed to update case (HTTP ${response.status})`;
+    try {
+      const text = await response.text();
+      try {
+        const errData = JSON.parse(text);
+        errorMessage = errData.message || errData.error || errorMessage;
+      } catch {
+        // Response is not JSON (e.g. IIS HTML error page)
+        const match = text.match(/<title>([^<]+)<\/title>/i);
+        if (match) {
+          errorMessage = `Server error: ${match[1].trim()}`;
+        }
+        console.error('[updateCaseApi] Non-JSON error response:', text.substring(0, 500));
+      }
+    } catch {
+      errorMessage = `Failed to update case: ${response.statusText}`;
+    }
+    throw new Error(errorMessage);
   }
 
   const updatedCase: BackendCase = await response.json();

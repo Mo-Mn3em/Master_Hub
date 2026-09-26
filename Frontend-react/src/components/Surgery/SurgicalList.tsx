@@ -615,7 +615,12 @@ export const SurgicalList: React.FC = () => {
                             <div className="surg-row-title">{patient.bas_name}</div>
                             <div className="surg-row-sub">
                               <span>MRN: {patient.bas_mrn}</span>
-                              <span style={{ marginLeft: 10 }}>Blood: {patient.bas_blood || 'Unknown'}</span>
+                              <span 
+                                className={`blood-tag ${patient.bas_blood?.includes('-') ? 'blood-neg' : 'blood-pos'}`}
+                                style={{ marginLeft: 8 }}
+                              >
+                                {patient.bas_blood || 'Unknown'}
+                              </span>
                             </div>
 
                             <div style={{ marginTop: 6, fontSize: '0.75rem' }}>
@@ -950,7 +955,12 @@ export const SurgicalList: React.FC = () => {
                             <div className="surg-row-title">{patient.bas_name}</div>
                             <div className="surg-row-sub">
                               <span>MRN: {patient.bas_mrn}</span>
-                              <span style={{ marginLeft: 10 }}>Blood: {patient.bas_blood || 'Unknown'}</span>
+                              <span 
+                                className={`blood-tag ${patient.bas_blood?.includes('-') ? 'blood-neg' : 'blood-pos'}`}
+                                style={{ marginLeft: 8 }}
+                              >
+                                {patient.bas_blood || 'Unknown'}
+                              </span>
                             </div>
 
                             <div style={{ marginTop: 6, fontSize: '0.75rem' }}>

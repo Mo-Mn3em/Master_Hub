@@ -154,16 +154,32 @@ const PROCEDURE_DB: Record<string, (string | { category: string; ops: string[] }
     "Thoracoscopic Sympathectomy", "Umbilical Hernia Repair", "Urethroplasty", "Wound Debridement"
   ],
   maxf: [
-    "Alar Reconstruction", "Alveolar Bone Graft", "Bleomycin Injection", 
-    "Buccinator Flap Separation", "Cleft Lip and Alveolus Repair", "Cleft Lip Repair (Bilateral)", 
-    "Cleft Lip Repair (Unilateral)", "Cleft Lip Revision", "Cleft Palate Repair", 
-    "Closure of Palatal Fistula", "Complete Cleft Lip and Alveolus Repair (Unilateral)", 
-    "Craniofacial Syndrome Surgery", "Craniosynostosis Repair", "Excision of Cystic Hygroma", 
-    "Excision of Soft Tissue Tumor and Mandibular Cleft Correction", "Hemimandibulectomy with Rib Graft Reconstruction", 
-    "Large Cleft Palate Repair", "Lip and Nose Revision", "Lower Lip Reconstruction (Flap and Skin Graft)", 
-    "Nasal Reconstruction", "Oral Tumor Resection", "Palatal Lengthening for VPI", 
-    "Preauricular Skin Tag Removal", "Serial Excision of Hemangioma", "Soft Cleft Palate Repair", 
-    "Tissue Reduction of Neurofibromatosis"
+    "Unilateral Cleft Lip Repair (Cheiloplasty)",
+    "Unilateral Complete Cleft Lip and Alveolar Repair",
+    "Bilateral Cleft Lip Repair (Cheiloplasty)",
+    "Cleft Palate Repair (Palatoplasty)",
+    "Soft Palate Repair (Veloplasty)",
+    "Secondary Cleft Lip Revision (Rhinocheiloplasty)",
+    "Primary Gingivoperiosteoplasty",
+    "Secondary Alveolar Bone Grafting (SABG)",
+    "Nasal Alar Reconstruction",
+    "Buccinator Myomucosal Flap Division",
+    "Pharyngeal Flap Surgery / Sphincter Pharyngoplasty",
+    "Craniosynostosis Release and Cranial Vault Remodeling (CVR)",
+    "Craniofacial Syndromes Reconstruction",
+    "Orthognathic Surgery for Congenital Hypoplasia",
+    "Mandibular Distraction Osteogenesis (MDO)",
+    "Excision of Congenital Soft Tissue Tumor and Mandibular Cleft Repair",
+    "Tongue-Lip Adhesion (Glossopexy)",
+    "Macrostomia Repair (Transverse Facial Cleft Repair)",
+    "Microtia Reconstruction",
+    "Excision of Preauricular Sinus and Tract",
+    "Excision of Branchial Cleft Cyst and Tract",
+    "Excision of Cystic Hygroma / Lymphatic Malformation",
+    "Serial Excision of Hemangioma / Vascular Malformations",
+    "Excision of Congenital Lower Lip Pits",
+    "Sistrunk Procedure (Thyroglossal Duct Cyst Excision)",
+    "Frenuloplasty / Ankyloglossia Release"
   ],
   recon: [
     "Abdominal Wall Reconstruction", "Cleft Hand Correction", "Congenital Neck Band Release with Z-plasty", 
@@ -182,8 +198,9 @@ const PROCEDURE_DB: Record<string, (string | { category: string; ops: string[] }
     "Cochlear Implantation", "Excision of Cochlear Schwannoma"
   ],
   dent: [
-    "Major Dental Procedure", "Moderate Dental Procedure", 
-    "Minor Dental Procedure"
+    "Major Dental surgery",
+    "Moderate Dental surgery",
+    "Minor Dental surgery"
   ],
   hope: [
     "Fetal Intervention Evaluation", "Postnatal Surgical Planning", "Prenatal Consultation & Counseling"
@@ -231,7 +248,7 @@ export const PatientForm: React.FC = () => {
   } = useApp();
 
   const isNew = editingPatientId === 'new';
-  const existingPatient = patients.find(p => p.id === editingPatientId);
+  const existingPatient = patients.find(p => String(p.id) === String(editingPatientId));
 
   // 1. Initial State Definition
   const [localPatient, setLocalPatient] = useState<Partial<Patient>>({
@@ -934,7 +951,17 @@ export const PatientForm: React.FC = () => {
 
   // 3. Department Enrollment Toggle
   const handleEnrollmentToggle = (code: string, enrolled: boolean) => {
+    // Permission guard: Only staff with access to this department (or Admin) can assign or unassign it!
+    if (!canEditDepartment(code)) {
+      const deptName = DEPARTMENTS.find(d => d.code === code)?.label || code;
+      alert(`Permission Denied: Only staff assigned to ${deptName} or System Administrators can change enrollment for this department.`);
+      return;
+    }
+
     setDirty(true);
+    if (enrolled) {
+      setActiveAccordion(code);
+    }
 
     setEnrolledClinics(prev => {
       const next = { ...prev, [code]: enrolled };
@@ -1019,8 +1046,10 @@ export const PatientForm: React.FC = () => {
   };
 
   // 4. Save Submission
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = async (e?: React.FormEvent | React.MouseEvent) => {
+    if (e && typeof e.preventDefault === 'function') {
+      e.preventDefault();
+    }
 
     // Collect 100% of current DOM values from form inputs across all departments
     const updatedPrograms: Record<string, ProgramData> = { ...((localPatient.programs as Record<string, ProgramData>) || {}) };
@@ -1118,15 +1147,22 @@ export const PatientForm: React.FC = () => {
     const bloodEl = document.getElementById('bas_blood') as HTMLSelectElement;
     const phoneEl = document.getElementById('bas_phone') as HTMLInputElement;
 
+    const resolvedId = (!isNew && (editingPatientId || existingPatient?.id || localPatient.id))
+      ? String(editingPatientId || existingPatient?.id || localPatient.id)
+      : (localPatient.id ? String(localPatient.id) : undefined);
+
+    const selectedBlood = (bloodEl && bloodEl.value !== undefined) ? bloodEl.value : (localPatient.bas_blood || '');
+
     const patientToSave: Partial<Patient> = {
       ...localPatient,
+      id: resolvedId,
       bas_name: nameEl?.value?.trim() || localPatient.bas_name || '',
       bas_mrn: mrnEl?.value?.trim() || localPatient.bas_mrn || '',
       bas_ssn: ssnEl?.value?.trim() || localPatient.bas_ssn || '',
       bas_gender: (genderEl?.value || localPatient.bas_gender || 'male') as '' | 'male' | 'female',
       bas_dob: dobEl?.value || localPatient.bas_dob || '',
       bas_gov: govEl?.value || localPatient.bas_gov || '',
-      bas_blood: bloodEl?.value || localPatient.bas_blood || '',
+      bas_blood: selectedBlood,
       bas_phone: phoneEl?.value?.trim() || localPatient.bas_phone || '',
       programs: updatedPrograms,
     };
@@ -1263,8 +1299,13 @@ export const PatientForm: React.FC = () => {
         }
       });
 
+      const resolvedId = (!isNew && (editingPatientId || existingPatient?.id || localPatient.id))
+        ? String(editingPatientId || existingPatient?.id || localPatient.id)
+        : (localPatient.id ? String(localPatient.id) : undefined);
+
       const patientToSave: Partial<Patient> = {
         ...localPatient,
+        id: resolvedId,
         programs: updatedPrograms,
       };
 
@@ -1329,8 +1370,13 @@ export const PatientForm: React.FC = () => {
       const logEntry = `[${todayStr}] ❌ Rejected by Anesthesia Clinic. Reason: ${reason}`;
       const newSocial = localPatient.bas_social ? localPatient.bas_social + '\n' + logEntry : logEntry;
 
+      const resolvedId = (!isNew && (editingPatientId || existingPatient?.id || localPatient.id))
+        ? String(editingPatientId || existingPatient?.id || localPatient.id)
+        : (localPatient.id ? String(localPatient.id) : undefined);
+
       const patientToSave: Partial<Patient> = {
         ...localPatient,
+        id: resolvedId,
         bas_social: newSocial,
         programs: updatedPrograms
       };
@@ -1586,6 +1632,19 @@ export const PatientForm: React.FC = () => {
     );
   };
 
+  // Determine which departments the current user has access to that are not yet enrolled on this case
+  const userDeptCodes: string[] = Array.isArray(currentUser?.department_codes)
+    ? currentUser.department_codes
+    : (typeof currentUser?.department_code === 'string'
+        ? (currentUser.department_code.startsWith('[')
+            ? (() => { try { return JSON.parse(currentUser.department_code || '[]'); } catch { return []; } })()
+            : currentUser.department_code.split(',').map((s: string) => s.trim()))
+        : []);
+
+  const unenrolledUserDepts = userDeptCodes
+    .map(code => DEPARTMENTS.find(d => d.code.toLowerCase() === code.toLowerCase()))
+    .filter((d): d is typeof DEPARTMENTS[0] => !!d && d.code !== 'anes' && !enrolledClinics[d.code]);
+
   return (
     <div className="container fade-in">
       {/* ── Form Actions Header ── */}
@@ -1614,6 +1673,7 @@ export const PatientForm: React.FC = () => {
                   MRN: {localPatient.bas_mrn}
                 </span>
               )}
+
             </div>
           )}
         </div>
@@ -1652,26 +1712,125 @@ export const PatientForm: React.FC = () => {
       </div>
 
       <form ref={formRef} id="masterForm" onChange={handleFormChange} onSubmit={handleSave}>
+        {/* ── Quick Assign Banner for User's Accessible Departments ── */}
+        {!isAdmin && unenrolledUserDepts.length > 0 && (
+          <div style={{
+            background: 'linear-gradient(135deg, #f0fdfa 0%, #e6fffa 100%)',
+            border: '1.5px solid #0f766e',
+            borderRadius: '14px',
+            padding: '14px 18px',
+            marginBottom: 20,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 12,
+            boxShadow: '0 2px 8px rgba(15, 118, 110, 0.08)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{
+                width: 36,
+                height: 36,
+                borderRadius: 10,
+                background: '#0f766e',
+                color: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <Building2 style={{ width: 20, height: 20 }} />
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#0f766e' }}>
+                  Assign this Case to Your Department
+                </div>
+                <div style={{ fontSize: '0.78rem', color: '#334155' }}>
+                  You can enroll this case into your department while keeping all other clinical department assignments intact.
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {unenrolledUserDepts.map(d => d && (
+                <button
+                  key={d.code}
+                  type="button"
+                  onClick={() => {
+                    handleEnrollmentToggle(d.code, true);
+                    setActiveAccordion(d.code);
+                  }}
+                  className="btn btn-primary btn-sm"
+                  style={{
+                    background: d.color || '#0f766e',
+                    borderColor: d.color || '#0f766e',
+                    fontWeight: 700,
+                    fontSize: '0.82rem',
+                    padding: '8px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
+                  }}
+                >
+                  <Plus style={{ width: 14, height: 14 }} />
+                  <span>+ Enroll Case in {d.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* ── Enrollment Toggle Panel ── */}
         <div className="enrollment-panel" style={{ borderRadius: '16px', marginBottom: 24 }}>
-          <div className="enrollment-header">Department Clinic Enrollments</div>
+          <div className="enrollment-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+            <span>Department Clinic Enrollments</span>
+            {!isAdmin && (
+              <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'rgba(255,255,255,0.85)' }}>
+                ℹ️ You can assign your department to any case across the system
+              </span>
+            )}
+          </div>
           <div className="enrollment-grid">
             {DEPARTMENTS.filter(dept => dept.code !== 'anes').map(dept => {
               const enrolled = !!enrolledClinics[dept.code];
               const activeClass = enrolled ? `active-${dept.code}` : '';
+              const canToggle = canEditDepartment(dept.code);
               return (
                 <label 
                   key={dept.code} 
                   className={`enroll-toggle ${activeClass}`}
-                  style={{ borderLeft: enrolled ? `4px solid ${dept.color}` : '1px solid rgba(255,255,255,0.08)' }}
+                  style={{ 
+                    borderLeft: enrolled ? `4px solid ${dept.color}` : '1px solid rgba(255,255,255,0.08)',
+                    cursor: canToggle ? 'pointer' : 'not-allowed',
+                    opacity: canToggle ? 1 : 0.72,
+                    position: 'relative'
+                  }}
+                  title={canToggle ? `Click to ${enrolled ? 'remove from' : 'assign to'} ${dept.label}` : `Only staff with access to ${dept.label} (or Admin) can change this enrollment`}
                 >
                   <input 
                     type="checkbox" 
                     id={`enr_${dept.code}`}
                     checked={enrolled}
-                    onChange={(e) => handleEnrollmentToggle(dept.code, e.target.checked)}
+                    disabled={!canToggle}
+                    onChange={(e) => {
+                      if (canToggle) {
+                        handleEnrollmentToggle(dept.code, e.target.checked);
+                      }
+                    }}
                   />
-                  {dept.label}
+                  <span>{dept.label}</span>
+                  {!canToggle && (
+                    <Lock 
+                      style={{ 
+                        width: 12, 
+                        height: 12, 
+                        marginLeft: 6, 
+                        color: enrolled ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.4)', 
+                        verticalAlign: 'middle', 
+                        display: 'inline-block' 
+                      }} 
+                    />
+                  )}
                 </label>
               );
             })}
@@ -2956,9 +3115,11 @@ export const PatientForm: React.FC = () => {
             </button>
 
             <button 
-              type="submit" 
+              type="button" 
               className="btn btn-primary"
+              onClick={handleSave}
               disabled={isSaving}
+              id="btn_bottom_save"
               style={{
                 padding: '10px 24px',
                 fontSize: '0.90rem',
@@ -2977,7 +3138,7 @@ export const PatientForm: React.FC = () => {
               {isSaving ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Saving to Database...</span>
+                  <span>Saving to DB...</span>
                 </>
               ) : (
                 <>

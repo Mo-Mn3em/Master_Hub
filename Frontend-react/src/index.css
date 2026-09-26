@@ -1484,14 +1484,120 @@ textarea {
   font-weight: 500;
 }
 
-/* ── PAGINATION ────────────────────────── */
+/* ── PAGINATION & TOOLBARS ───────────────── */
 .pagination {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-top: 24px;
-  padding-top: 20px;
-  border-top: 1px solid var(--border);
+  margin-bottom: 32px;
+  padding: 14px 22px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.pagination-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.pagination-current-page {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.pagination-total-count {
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.pagination .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.pagination .btn:not(:disabled):hover {
+  background: var(--accent);
+  color: #ffffff;
+  border-color: var(--accent);
+  box-shadow: 0 3px 10px rgba(15, 118, 110, 0.25);
+}
+
+.directory-header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  padding: 4px 2px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.directory-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.directory-count-badge {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  background: var(--surface);
+  padding: 6px 14px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.directory-dept-badge {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-dim);
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(20, 184, 166, 0.2);
+}
+
+.pagination-compact {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  padding: 4px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.pagination-compact .btn {
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+}
+
+.pagination-page-indicator {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 0 6px;
 }
 
 /* ── DYNAMIC TRANSITIONS ───────────────── */
@@ -1696,11 +1802,18 @@ textarea {
 }
 
 .app-modal-body::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
+}
+.app-modal-body::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
 }
 .app-modal-body::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 3px;
+  background: #94a3b8;
+  border-radius: 4px;
+}
+.app-modal-body::-webkit-scrollbar-thumb:hover {
+  background: #0f766e;
 }
 
 .app-modal-footer {
@@ -1815,8 +1928,27 @@ textarea {
 .modal-table-container {
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: auto;
+  max-height: 520px;
   background: #ffffff;
+  position: relative;
+}
+
+.modal-table-container::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.modal-table-container::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+.modal-table-container::-webkit-scrollbar-thumb {
+  background: #0f766e;
+  border-radius: 4px;
+}
+.modal-table-container::-webkit-scrollbar-thumb:hover {
+  background: #0d9488;
 }
 
 .modal-table {
@@ -1827,6 +1959,9 @@ textarea {
 }
 
 .modal-table th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   background: #f1f5f9;
   color: #334155;
   font-size: 11px;
@@ -1834,7 +1969,8 @@ textarea {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 12px 16px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 2px solid #cbd5e1;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .modal-table td {
@@ -1990,4 +2126,153 @@ textarea {
   align-items: center;
   justify-content: space-between;
 }
+
+/* ══════════════════════════════════════════════════════════════
+   LARGE SCREEN & 32-INCH DISPLAY OPTIMIZATION (MEDIA QUERIES)
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Desktops & Medium-Large Screens (1440px+) ──────────────── */
+@media (min-width: 1440px) {
+  .container {
+    max-width: 1720px;
+    padding: 24px 32px;
+  }
+  .patient-grid {
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 16px;
+  }
+  .stats-grid {
+    gap: 16px;
+  }
+}
+
+/* ── Large Desktop Displays (1680px - 1920px) ──────────────── */
+@media (min-width: 1680px) {
+  .container {
+    max-width: 1980px;
+    padding: 26px 36px;
+  }
+  .patient-grid {
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 18px;
+  }
+  .stats-grid {
+    gap: 18px;
+  }
+  .stat-card {
+    padding: 16px 22px;
+  }
+  .stat-value {
+    font-size: 28px;
+  }
+}
+
+/* ── 32-Inch Monitors & QHD Displays (1920px - 2560px) ──────── */
+@media (min-width: 1920px) {
+  .container {
+    max-width: 2300px;
+    padding: 28px 44px;
+  }
+  .patient-grid {
+    grid-template-columns: repeat(auto-fill, minmax(370px, 1fr));
+    gap: 20px;
+  }
+  .stats-grid {
+    gap: 20px;
+  }
+  .stat-value {
+    font-size: 30px;
+  }
+  .card {
+    padding: 18px 20px;
+  }
+  .card-name {
+    font-size: 17px;
+  }
+  .pagination {
+    margin-top: 28px;
+    margin-bottom: 40px;
+    padding: 16px 26px;
+  }
+  .pagination .btn {
+    padding: 10px 20px;
+    font-size: 13.5px;
+  }
+  .pagination-info {
+    font-size: 14.5px;
+  }
+}
+
+/* ── Ultra-Wide & Native 32-Inch 1440p / 4K UHD Displays (2560px+) */
+@media (min-width: 2560px) {
+  .container {
+    max-width: 2700px;
+    padding: 36px 56px;
+  }
+  .patient-grid {
+    grid-template-columns: repeat(auto-fill, minmax(390px, 1fr));
+    gap: 24px;
+  }
+  .stats-grid {
+    gap: 24px;
+  }
+  .stat-value {
+    font-size: 34px;
+  }
+  .stat-label {
+    font-size: 12.5px;
+  }
+  .card {
+    padding: 20px 24px;
+    border-radius: 18px;
+  }
+  .card-name {
+    font-size: 18px;
+  }
+  .card-mrn {
+    font-size: 13px;
+  }
+  .filter-bar {
+    padding: 16px 24px;
+    gap: 16px;
+  }
+  .filter-bar .form-group {
+    min-width: 210px;
+  }
+  .pagination {
+    margin-top: 32px;
+    margin-bottom: 48px;
+    padding: 18px 30px;
+    border-radius: 16px;
+  }
+  .pagination .btn {
+    padding: 12px 24px;
+    font-size: 14.5px;
+    border-radius: 10px;
+  }
+  .pagination-info {
+    font-size: 15px;
+  }
+  .pagination-compact .btn {
+    padding: 7px 16px;
+    font-size: 13px;
+  }
+}
+
+/* ── Tall Screens (min-height: 900px) — Ensure Bottom Pagination is always visible */
+@media (min-height: 900px) {
+  #main-content {
+    padding-bottom: 24px;
+  }
+  .pagination {
+    position: sticky;
+    bottom: 20px;
+    z-index: 30;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 4px 20px rgba(15, 23, 42, 0.1), 0 0 0 1px var(--border);
+  }
+}
+
 

@@ -74,6 +74,7 @@ export interface Patient {
   isVIP?: boolean;
   isStalled?: boolean;
   createdAt?: string;
+  createdBy?: string;
   updatedAt?: string;
   updatedBy?: string;
   

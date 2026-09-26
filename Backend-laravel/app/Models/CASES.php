@@ -35,6 +35,8 @@ class Cases extends Model
         'social_alarm_priority',
         'programs',
         'research',
+        'created_by',
+        'updated_by',
     ];
 
     protected $casts = [
@@ -44,6 +46,38 @@ class Cases extends Model
         'social_alarm_date'        => 'date',
         'research'                 => 'array',
     ];
+
+    /**
+     * Accessor for past_surgeries stored inside research JSON payload.
+     */
+    public function getPastSurgeriesAttribute()
+    {
+        $res = $this->research;
+        if (is_string($res)) {
+            $res = json_decode($res, true);
+        }
+        return is_array($res) ? ($res['past_surgeries'] ?? []) : [];
+    }
+
+    /**
+     * Mutator for past_surgeries stored inside research JSON payload.
+     */
+    public function setPastSurgeriesAttribute($value)
+    {
+        $res = $this->research ?? [];
+        if (is_string($res)) {
+            $res = json_decode($res, true);
+        }
+        if (!is_array($res)) {
+            $res = [];
+        }
+        if (is_string($value)) {
+            try { $value = json_decode($value, true); } catch (\Throwable $e) {}
+        }
+        $res['past_surgeries'] = is_array($value) ? $value : [];
+        $this->attributes['research'] = json_encode($res);
+        unset($this->attributes['past_surgeries']);
+    }
 
     /**
      * Pure Many-to-Many relationship with Department model via case_department junction table.
@@ -114,5 +148,15 @@ class Cases extends Model
         } catch (\Exception $e) {
             return null;
         }
+    }
+
+    /**
+     * Retrieve the model for a bound route value (supports primary key ID or MRN).
+     */
+    public function resolveRouteBinding($value, $field = null)
+    {
+        return $this->where('id', $value)
+                    ->orWhere('mrn', $value)
+                    ->first() ?? abort(404, "Case not found for identifier '{$value}'.");
     }
 }

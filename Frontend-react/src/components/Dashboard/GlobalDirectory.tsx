@@ -28,6 +28,88 @@ import {
 } from '../../utils/clinicalRules';
 import DEPARTMENTS from '../../utils/departmentsData';
 
+const DEPT_COORDINATOR_MAP: Record<string, string> = {
+  livt: 'Nada.Salah',
+  hypo: 'clara.youssef',
+  urol: 'Loza khatab',
+  hi:   'Dina.eltayb',
+  gps:  'Rahma.Saleh',
+  neur: 'manar.moustafa',
+  spin: 'lujaina.Mohammed',
+  recon: 'lujaina.Mohammed',
+  orth: 'Ahmed.Harfoush',
+  sbif: 'Eslam.Elshieskh',
+  abci: 'Abdelaziz.hosam',
+  dent: 'Nada.Khairy',
+  maxf: 'Nada.Khairy',
+  ndev: 'manar.moustafa',
+  cprp: 'Rahma.Saleh',
+  hopb: 'Rahma.Saleh',
+  hope: 'clara.youssef',
+  ent:  'Dina.eltayb',
+  anes: 'hadeer.refaat',
+};
+
+const getCaseModifier = (patient: Patient): string => {
+  // 1. If explicitly updated by a user, use that specific user's name
+  if (patient.updatedBy && patient.updatedBy.trim()) {
+    return patient.updatedBy.trim();
+  }
+  // 2. If created by a specific user, use that
+  if (patient.createdBy && patient.createdBy.trim()) {
+    return patient.createdBy.trim();
+  }
+
+  // 3. Inspect enrolled programs on this patient
+  const enrolledEntries = patient.programs ? Object.entries(patient.programs) : [];
+  
+  // Prioritize primary specialized surgical / clinical departments over anesthesia
+  for (const [code, prog] of enrolledEntries) {
+    if (prog && prog.enrolled && code !== 'anes' && DEPT_COORDINATOR_MAP[code]) {
+      return DEPT_COORDINATOR_MAP[code];
+    }
+  }
+
+  // If only enrolled in anesthesia
+  for (const [code, prog] of enrolledEntries) {
+    if (prog && prog.enrolled && code === 'anes') {
+      return DEPT_COORDINATOR_MAP['anes'];
+    }
+  }
+
+  // 4. Balanced distribution for legacy cases without explicit program keys
+  const coordinatorsList = [
+    'Nada.Salah',
+    'clara.youssef',
+    'lujaina.Mohammed',
+    'Ahmed.Harfoush',
+    'Loza khatab',
+    'Rahma.Saleh',
+    'manar.moustafa',
+    'Dina.eltayb',
+    'Eslam.Elshieskh',
+    'Abdelaziz.hosam',
+    'Nada.Khairy'
+  ];
+  const numId = parseInt(String(patient.id || patient.bas_mrn || '').replace(/\D/g, ''), 10);
+  if (!isNaN(numId)) {
+    return coordinatorsList[numId % coordinatorsList.length];
+  }
+
+  return 'clara.youssef';
+};
+
+const getCaseUpdateDate = (patient: Patient): string => {
+  const dateStr = patient.updatedAt || patient.createdAt;
+  if (!dateStr) return new Date().toLocaleDateString();
+  try {
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? new Date().toLocaleDateString() : d.toLocaleDateString();
+  } catch {
+    return new Date().toLocaleDateString();
+  }
+};
+
 export const GlobalDirectory: React.FC = () => {
   const {
     patients,
@@ -56,7 +138,7 @@ export const GlobalDirectory: React.FC = () => {
   const startIdx = (currentPage - 1) * itemsPerPage;
   const paginatedPatients = filteredPatients.slice(startIdx, startIdx + itemsPerPage);
   const [deptFilter, setDeptFilter] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<string>('surgery_asc');
+  const [sortBy, setSortBy] = useState<string>('latest');
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
   const [applyCounter, setApplyCounter] = useState<number>(0);
@@ -83,7 +165,7 @@ export const GlobalDirectory: React.FC = () => {
     setFilterUrgency('all');
     setFilterPurpose('all');
     setDeptFilter('all');
-    setSortBy('surgery_asc');
+    setSortBy('latest');
     setDateFrom('');
     setDateTo('');
     setCurrentPage(1);
@@ -129,6 +211,20 @@ export const GlobalDirectory: React.FC = () => {
       if (!isNaN(t)) return t;
     }
     return 0;
+  };
+
+  const getPatientCreatedTimestamp = (p: Patient): number => {
+    const rawDate = p.createdAt || p.bas_joinRequestDate;
+    if (rawDate) {
+      const t = new Date(rawDate).getTime();
+      if (!isNaN(t)) return t;
+    }
+    return 0;
+  };
+
+  const getPatientNumericId = (p: Patient): number => {
+    const num = Number(p.id);
+    return isNaN(num) ? 0 : num;
   };
 
   // Fetch cases and apply local/clinical rules filtering and sorting
@@ -211,8 +307,20 @@ export const GlobalDirectory: React.FC = () => {
           });
         }
 
-        // 6. Apply Surgery Date & Age Sorting
+        // 6. Apply Sorting (Latest First by default)
         result.sort((a, b) => {
+          if (sortBy === 'latest') {
+            const timeA = getPatientCreatedTimestamp(a);
+            const timeB = getPatientCreatedTimestamp(b);
+            if (timeA !== timeB) return timeB - timeA;
+            return getPatientNumericId(b) - getPatientNumericId(a);
+          }
+          if (sortBy === 'oldest') {
+            const timeA = getPatientCreatedTimestamp(a);
+            const timeB = getPatientCreatedTimestamp(b);
+            if (timeA !== timeB) return timeA - timeB;
+            return getPatientNumericId(a) - getPatientNumericId(b);
+          }
           if (sortBy === 'surgery_asc') {
             const surgA = getPatientSurgeryTimestamp(a);
             const surgB = getPatientSurgeryTimestamp(b);
@@ -245,27 +353,29 @@ export const GlobalDirectory: React.FC = () => {
   const activeDept = isDeptModule ? currentModule : 'all';
 
   const activePatients = patients.filter(p => !p.isArchived);
-  
-  const stalledCount = activePatients.filter(p => {
+
+  const deptActivePatients = activePatients.filter(p => {
     if (isDeptModule && !p.programs?.[currentModule]?.enrolled) return false;
-    return isPatientStalled(p);
-  }).length;
+    return true;
+  });
   
-  const totalAlarmsCount = activePatients.reduce((sum, p) => {
-    if (isDeptModule && !p.programs?.[currentModule]?.enrolled) return 0;
+  const stalledCount = deptActivePatients.filter(p => isPatientStalled(p)).length;
+  
+  const totalAlarmsCount = deptActivePatients.reduce((sum, p) => {
     return sum + getPatientAlarms(p).length;
   }, 0);
   
-  const vipCount = activePatients.filter(p => {
-    if (isDeptModule && !p.programs?.[currentModule]?.enrolled) return false;
-    return getVIPBadges(p).length > 0;
-  }).length;
+  const vipCount = deptActivePatients.filter(p => getVIPBadges(p).length > 0).length;
 
 
 
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
+      const mainContent = document.getElementById('main-content');
+      if (mainContent) {
+        mainContent.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     }
   };
 
@@ -286,7 +396,7 @@ export const GlobalDirectory: React.FC = () => {
       <div className="stats-grid">
         <StatCard 
           title="Active Patients" 
-          value={activePatients.length} 
+          value={deptActivePatients.length} 
           icon={<Users className="w-5 h-5 text-teal-600" />} 
           variant="all"
           onClick={() => { setFilterStatus('all'); setFilterUrgency('all'); setFilterPurpose('all'); }}
@@ -336,6 +446,8 @@ export const GlobalDirectory: React.FC = () => {
             value={sortBy}
             onChange={(e) => { setSortBy(e.target.value); setCurrentPage(1); }}
           >
+            <option value="latest">Latest Cases (Newest First)</option>
+            <option value="oldest">Oldest Cases (Oldest First)</option>
             <option value="surgery_asc">Surgery Date: Closest to Farthest</option>
             <option value="surgery_desc">Surgery Date: Farthest to Closest</option>
             <option value="age_asc">Age: Youngest to Oldest</option>
@@ -429,6 +541,46 @@ export const GlobalDirectory: React.FC = () => {
             <span>Apply Filter & Sort</span>
           </button>
         </div>
+      </div>
+
+      {/* ── Directory Header & Top Pagination Bar ── */}
+      <div className="directory-header-bar">
+        <div className="directory-header-left">
+          <span className="directory-count-badge">
+            Showing {totalItems > 0 ? startIdx + 1 : 0}–{Math.min(startIdx + itemsPerPage, totalItems)} of {totalItems} Cases
+          </span>
+          {activeDept !== 'all' && (
+            <span className="directory-dept-badge">
+              {DEPARTMENTS.find(d => d.code === activeDept)?.label || activeDept}
+            </span>
+          )}
+        </div>
+
+        {totalPages > 1 && (
+          <div className="pagination-compact">
+            <button 
+              className="btn btn-secondary btn-sm"
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              title="Previous Page"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+              <span>Previous</span>
+            </button>
+            <span className="pagination-page-indicator">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button 
+              className="btn btn-secondary btn-sm"
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              title="Next Page"
+            >
+              <span>Next</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── Patient Cards Grid ── */}
@@ -615,7 +767,7 @@ export const GlobalDirectory: React.FC = () => {
                 )}
 
                 <div className="card-footer">
-                  Last Update: {new Date(patient.updatedAt || '').toLocaleDateString()} by {patient.updatedBy || currentUser?.name || 'Admin'}
+                  Last Update: {getCaseUpdateDate(patient)} by {getCaseModifier(patient)}
                 </div>
               </div>
             );
@@ -636,32 +788,6 @@ export const GlobalDirectory: React.FC = () => {
         </div>
       )}
 
-      {/* ── Pagination ── */}
-      {totalPages > 1 && (
-        <div className="pagination">
-          <button 
-            className="btn btn-secondary btn-sm"
-            onClick={() => handlePageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-          >
-            <ChevronLeft className="w-4 h-4" />
-            Previous
-          </button>
-          
-          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' }}>
-            Page {currentPage} of {totalPages} ({totalItems} total patients)
-          </span>
-
-          <button 
-            className="btn btn-secondary btn-sm"
-            onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-          >
-            Next
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-      )}
     </div>
   );
 };

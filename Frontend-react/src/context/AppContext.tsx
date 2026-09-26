@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { Patient, ResearchTemplate, ClinicalLog, UserAccount } from '../types';
-import { fetchCasesApi, createCaseApi, updateCaseApi, deleteCaseApi, loginApi, logoutApi } from '../utils/api';
+import { fetchCasesApi, createCaseApi, updateCaseApi, deleteCaseApi, loginApi, logoutApi, fetchCurrentUserApi } from '../utils/api';
 import { isPatientStalled } from '../utils/clinicalRules';
 
 interface AppContextType {
@@ -74,6 +74,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [currentModule, setCurrentModule] = useState<string>('hub');
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => {
     try {
+      const expiresAt = Number(localStorage.getItem('master_hub_expires_at'));
+      if (expiresAt && Date.now() >= expiresAt) {
+        localStorage.removeItem('master_hub_user');
+        localStorage.removeItem('master_hub_user_account');
+        localStorage.removeItem('master_hub_token');
+        localStorage.removeItem('master_hub_expires_at');
+        return null;
+      }
       const token = localStorage.getItem('master_hub_token');
       // If token is missing, do not load cached user -> force login
       if (!token) return null;
@@ -227,8 +235,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return next5AM.getTime();
     };
 
-    const targetExpiresAt = getNext5AMTimestamp();
-    localStorage.setItem('master_hub_expires_at', String(targetExpiresAt));
+    let targetExpiresAt = Number(localStorage.getItem('master_hub_expires_at'));
+    if (!targetExpiresAt || isNaN(targetExpiresAt) || targetExpiresAt <= Date.now()) {
+      targetExpiresAt = getNext5AMTimestamp();
+      localStorage.setItem('master_hub_expires_at', String(targetExpiresAt));
+    }
 
     const checkSessionExpiry = () => {
       const expiresAt = Number(localStorage.getItem('master_hub_expires_at'));
@@ -238,10 +249,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     // 1. Timeout for exact 5:00 AM trigger
-    const msUntil5AM = targetExpiresAt - Date.now();
+    const msUntil5AM = Math.max(targetExpiresAt - Date.now(), 1000);
     const timer = setTimeout(() => {
       logout();
-    }, Math.max(msUntil5AM, 1000));
+    }, msUntil5AM);
 
     // 2. Periodic interval check (every 30s) + check on wake/focus
     const interval = setInterval(checkSessionExpiry, 30000);
@@ -265,6 +276,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.removeItem('master_hub_user_account');
       localStorage.removeItem('master_hub_token');
       localStorage.removeItem('master_hub_expires_at');
+    } else {
+      // Validate session with backend if token exists
+      const token = localStorage.getItem('master_hub_token');
+      if (token) {
+        fetchCurrentUserApi().then(user => {
+          if (user) {
+            setCurrentUser(user);
+            localStorage.setItem('master_hub_user_account', JSON.stringify(user));
+          }
+        });
+      }
     }
 
     loadPatients();
@@ -339,6 +361,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentUser(null);
     localStorage.removeItem('master_hub_user_account');
     localStorage.removeItem('master_hub_user');
+    localStorage.removeItem('master_hub_token');
+    localStorage.removeItem('master_hub_expires_at');
     logAction('LOGOUT', 'User logged out.');
   };
 
@@ -348,17 +372,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { success: false, error: 'Name and MRN are required fields.' };
     }
 
+    const targetId = patientData.id ? String(patientData.id) : null;
     const checkMRN = patientData.bas_mrn.trim().toLowerCase();
     const checkName = patientData.bas_name.trim().toLowerCase();
 
     const duplicate = patients.find(p => 
-      p.id !== patientData.id && 
+      (targetId ? String(p.id) !== targetId : true) && 
       ((checkMRN && p.bas_mrn && String(p.bas_mrn).trim().toLowerCase() === checkMRN) || 
        (checkName && p.bas_name && String(p.bas_name).trim().toLowerCase() === checkName))
     );
 
     if (duplicate && duplicate.isArchived) {
-      const updated = patients.map(p => p.id === duplicate.id ? { ...p, isArchived: false, archivedAt: undefined } : p);
+      const updated = patients.map(p => String(p.id) === String(duplicate.id) ? { ...p, isArchived: false, archivedAt: undefined } : p);
       saveToStorage(updated);
       logAction('PATIENT_RESTORE', `Duplicate match found. Restored archived patient: ${duplicate.bas_name} (MRN ${duplicate.bas_mrn})`);
       return { success: true, duplicateRestored: true };
@@ -370,46 +395,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     try {
       let savedRecord: Patient;
-      if (patientData.id && !patientData.id.startsWith('pat_')) {
-        savedRecord = await updateCaseApi(patientData.id, patientData);
+      const currentUserName = currentUser?.name || 'Admin';
+      patientData.updatedBy = currentUserName;
+
+      if (targetId && !targetId.startsWith('pat_')) {
+        savedRecord = await updateCaseApi(targetId, patientData);
         logAction('PATIENT_UPDATE', `Updated patient API record: ${savedRecord.bas_name} (MRN ${savedRecord.bas_mrn})`);
       } else {
+        patientData.createdBy = patientData.createdBy || currentUserName;
         savedRecord = await createCaseApi(patientData);
         logAction('PATIENT_CREATE', `Created new patient API record: ${savedRecord.bas_name} (MRN ${savedRecord.bas_mrn})`);
       }
 
+      if (!savedRecord.updatedBy) {
+        savedRecord.updatedBy = currentUserName;
+      }
+
       savedRecord.isStalled = isPatientStalled(savedRecord);
       
-      const updatedPatients = patientData.id 
-        ? patients.map(p => p.id === patientData.id ? savedRecord : p)
-        : [...patients, savedRecord];
+      const updatedPatients = targetId 
+        ? patients.map(p => String(p.id) === targetId ? savedRecord : p)
+        : [savedRecord, ...patients];
 
       saveToStorage(updatedPatients);
       setIsOnline(true);
       return { success: true };
     } catch (e: any) {
-      console.warn('API error during save, falling back to local storage', e);
-      setIsOnline(false);
-
-      const now = new Date().toISOString();
-      const updater = currentUser?.name || 'System';
-      let fallbackRecord: Patient;
-
-      if (patientData.id) {
-        const existing = patients.find(p => p.id === patientData.id);
-        if (!existing) return { success: false, error: 'Patient record not found.' };
-        fallbackRecord = { ...existing, ...patientData, updatedAt: now, updatedBy: updater } as Patient;
-      } else {
-        fallbackRecord = { ...patientData, id: `pat_${Date.now()}`, createdAt: now, updatedAt: now, updatedBy: updater } as Patient;
-      }
-
-      fallbackRecord.isStalled = isPatientStalled(fallbackRecord);
-      const updatedPatients = patientData.id 
-        ? patients.map(p => p.id === patientData.id ? fallbackRecord : p)
-        : [...patients, fallbackRecord];
-
-      saveToStorage(updatedPatients);
-      return { success: true };
+      console.error('API error during save:', e);
+      return { 
+        success: false, 
+        error: e.message || 'Failed to save patient record to database.' 
+      };
     }
   };
 

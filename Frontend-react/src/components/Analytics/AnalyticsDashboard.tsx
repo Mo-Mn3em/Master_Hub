@@ -106,7 +106,6 @@ const DIAGNOSIS_LABEL_MAP: { [key: string]: string } = {
   'hemimelia': 'Fibular / Tibial Hemimelia',
   'pffd': 'Proximal Focal Femoral Deficiency (PFFD)',
   'lld': 'Leg Length Discrepancy (LLD)',
-  'polydactyly': 'Polydactyly / Syndactyly',
   'radial_club_hand': 'Radial / Ulnar Club Hand',
   'trigger_thumb': 'Trigger Thumb / Finger',
   'amniotic_band': 'Amniotic Band Syndrome',
@@ -122,9 +121,11 @@ const DIAGNOSIS_LABEL_MAP: { [key: string]: string } = {
   'hydrocephalus_post': 'Post-Hemorrhagic / Post-Infectious Hydrocephalus',
   'arachnoid_cyst': 'Arachnoid Cyst',
   'dandy_walker': 'Dandy-Walker Malformation',
+  'iih': 'Idiopathic Intracranial Hypertension (IIH)',
   'encephalocele': 'Encephalocele',
   'chiari': 'Chiari Malformation (Type I / II)',
   'craniosynostosis': 'Craniosynostosis',
+  'occipital_porencephalic_cyst': 'Occipital Porencephalic Cyst',
   'epilepsy_surg': 'Epilepsy (Surgical Candidate)',
   'spasticity': 'Spasticity (SDR / Pump)',
   'tbi_skull_fx': 'Pediatric TBI / Skull Fracture',
@@ -199,9 +200,13 @@ const DIAGNOSIS_LABEL_MAP: { [key: string]: string } = {
   'post_burn_contracture': 'Post-Burn Contracture',
   'keloid_hypertrophic': 'Keloid / Hypertrophic Scar',
   'acute_burn': 'Acute Burn Injury',
+  'vascular_anomaly': 'Vascular Anomaly / Hemangioma',
   'congenital_nevus': 'Giant Congenital Nevus',
   'ear_anomaly': 'Microtia / Prominent Ear',
+  'polydactyly': 'Polydactyly',
+  'syndactyly': 'Syndactyly',
   'soft_tissue_loss': 'Soft Tissue Defect / Loss',
+  'facial_trauma': 'Facial Trauma Reconstruction',
   'nerve_injury': 'Peripheral Nerve Injury',
 
   // ABCI
@@ -246,7 +251,32 @@ const DIAGNOSIS_LABEL_MAP: { [key: string]: string } = {
   'thoracic': 'Thoracic Spinal Lesion',
   'lumbar': 'Lumbar Spinal Lesion',
   'sacral': 'Sacral Spinal Lesion',
-  'lipomeningocele': 'Lipomeningocele'
+  'lipomeningocele': 'Lipomeningocele',
+
+  // Dental Surgery
+  'early_childhood_caries': 'Early Childhood Caries (ECC)',
+  'rampant_caries': 'Rampant Caries',
+  'pulpitis': 'Irreversible Pulpitis',
+  'special_needs_dental': 'Special Needs Dentistry (ASD/CP)',
+  'cleft_dental': 'Cleft Lip/Palate Dental Care',
+  'amelogenesis': 'Amelogenesis / Dentinogenesis Imperfecta',
+  'dental_trauma': 'Dental Trauma / Avulsion',
+  'supernumerary': 'Supernumerary / Impacted Teeth',
+  'abscess': 'Dental Abscess / Cellulitis',
+
+  // Liver Transplant
+  'biliary_atresia': 'Biliary Atresia',
+  'pfi_cholestasis': 'PFIC',
+  'alagille': 'Alagille Syndrome',
+  'congenital_hepatic_fibrosis': 'Congenital Hepatic Fibrosis',
+  'wilson': 'Wilson Disease',
+  'alpha1': 'Alpha-1 Antitrypsin Deficiency',
+  'glycogen_storage': 'Glycogen Storage Disease',
+  'maple_syrup_urine_disease': 'Maple Syrup Urine Disease',
+  'hcc': 'Hepatocellular Carcinoma (HCC)',
+  'alf': 'Acute Liver Failure (ALF)',
+  'cirrhosis': 'End-Stage Liver Disease / Cirrhosis',
+  'autoimmune_hepatitis': 'Autoimmune Hepatitis'
 };
 
 interface TrendBadgeProps {
