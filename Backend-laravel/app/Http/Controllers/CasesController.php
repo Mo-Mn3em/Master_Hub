@@ -404,6 +404,7 @@ class CasesController extends Controller
             'departments'             => 'nullable',
             'research'                => 'nullable|array',
             'past_surgeries'          => 'nullable',
+            'patient_visits'          => 'nullable',
             'created_by'              => 'nullable|string|max:255',
             'updated_by'              => 'nullable|string|max:255',
         ]);
@@ -442,6 +443,21 @@ class CasesController extends Controller
         }
         unset($data['past_surgeries']);
         unset($data['departments']);
+
+        if ($request->has('patient_visits')) {
+            $visitsInput = $request->input('patient_visits');
+            if (is_string($visitsInput)) {
+                try { $visitsInput = json_decode($visitsInput, true); } catch (\Exception $e) {}
+            }
+            if (Schema::hasColumn('cases', 'patient_visits')) {
+                $data['patient_visits'] = is_array($visitsInput) ? $visitsInput : [];
+            } else {
+                unset($data['patient_visits']);
+            }
+        } elseif (!Schema::hasColumn('cases', 'patient_visits')) {
+            unset($data['patient_visits']);
+        }
+
         if (!Schema::hasColumn('cases', 'created_by')) {
             unset($data['created_by']);
         }
@@ -450,6 +466,7 @@ class CasesController extends Controller
         }
         return $data;
     }
+
 
     /**
      * Sync pure case_department pivot and save dedicated department table records.

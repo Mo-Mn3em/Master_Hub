@@ -18,8 +18,11 @@ Route::post('user/change-password', [AuthController::class, 'changePassword'])->
 // ── Admin User Management ─────────────────────────────────────────────────────
 Route::apiResource('users', UserController::class)->middleware('auth:sanctum');
 
-// ── Nile Patient Verification Route ──────────────────────────────────────────
-Route::post('nile/verify-patient', [NileVerificationController::class, 'verify']);
+// ── Nile Patient Personal Summary / Verification / Visits Routes ───────────
+Route::post('nile/personal-summary',     [NileVerificationController::class, 'personalSummary']);
+Route::post('nile/patient-visits',       [NileVerificationController::class, 'patientVisits']);
+Route::post('nile/sync-patient-visits',  [NileVerificationController::class, 'syncPatientVisits']);
+Route::post('nile/verify-patient',       [NileVerificationController::class, 'verify']);
 
 // ── Protected user info ───────────────────────────────────────────────────────
 Route::get('/user', function (Request $request) {

@@ -292,24 +292,43 @@ export async function fetchFilteredCasesApi(params: Record<string, string | unde
   return casesList.map(caseFromApi);
 }
 
-// ── Nile Patient Verification API ──────────────────────────────────────────────
-export interface NileVerificationPayload {
-  mobile: string;
-  typeOfIdentification?: string;
-  TypeOfIdentification?: string;
-  identificationNumber?: string;
-  IdentificationNumber?: string;
+// ── Nile Patient Personal Summary API ──────────────────────────────────────────
+export interface NilePersonalSummaryPayload {
+  patientID: string | number;
+}
+
+export interface NilePersonalSummaryData {
+  PatientID?: string | null;
+  PatientNameAr?: string | null;
+  PatientNameEn?: string | null;
+  Age?: string | null;
+  IDTypeAr?: string | null;
+  IDTypeEn?: string | null;
+  IDNumber?: string | null;
+  ReligionAr?: string | null;
+  ReligionEn?: string | null;
+  Phone1?: string | null;
+  Phone2?: string | null;
+  NationalityEn?: string | null;
+  NationalityAr?: string | null;
+  MaterialStatusAr?: string | null;
+  MaterialStatusEn?: string | null;
+  Email?: string | null;
+  Gender?: string | null;
+  DateOfBirth?: string | null;
+  error?: string | null;
+  [key: string]: any;
 }
 
 export interface NileVerificationResponse {
   status: 'success' | 'error';
-  data?: any;
+  data?: NilePersonalSummaryData;
   message?: string;
   details?: any;
 }
 
-export async function verifyPatientNileApi(payload: NileVerificationPayload): Promise<NileVerificationResponse> {
-  const response = await fetch(`${API_BASE}/nile/verify-patient`, {
+export async function fetchNilePersonalSummary(payload: NilePersonalSummaryPayload): Promise<NileVerificationResponse> {
+  const response = await fetch(`${API_BASE}/nile/personal-summary`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify(payload),
@@ -317,8 +336,15 @@ export async function verifyPatientNileApi(payload: NileVerificationPayload): Pr
 
   const data = await response.json();
   if (!response.ok) {
-    throw new Error(data.message || 'Patient verification failed');
+    throw new Error(data.message || 'Patient personal summary lookup failed');
   }
 
   return data;
 }
+
+// Backward compatibility wrapper
+export async function verifyPatientNileApi(payload: any): Promise<NileVerificationResponse> {
+  const patientId = payload.patientID || payload.patientId || payload.identificationNumber || payload.IdentificationNumber || payload.mrn || payload.mobile || '';
+  return fetchNilePersonalSummary({ patientID: patientId });
+}
+

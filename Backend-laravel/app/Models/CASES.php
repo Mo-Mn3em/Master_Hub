@@ -35,6 +35,7 @@ class Cases extends Model
         'social_alarm_priority',
         'programs',
         'research',
+        'patient_visits',
         'created_by',
         'updated_by',
     ];
@@ -45,7 +46,9 @@ class Cases extends Model
         'social_alarm_active'      => 'boolean',
         'social_alarm_date'        => 'date',
         'research'                 => 'array',
+        'patient_visits'           => 'array',
     ];
+
 
     /**
      * Accessor for past_surgeries stored inside research JSON payload.

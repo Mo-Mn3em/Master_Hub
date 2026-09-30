@@ -26,7 +26,7 @@ import {
   FileText,
   Lock
 } from 'lucide-react';
-import { verifyPatientNileApi } from '../../utils/api';
+import { fetchNilePersonalSummary, verifyPatientNileApi } from '../../utils/api';
 
 const PROCEDURE_DB: Record<string, (string | { category: string; ops: string[] })[]> = {
   hi: [
@@ -387,12 +387,10 @@ export const PatientForm: React.FC = () => {
   };
 
   const handleVerifyNilePatient = async () => {
-    const mobile = (localPatient.bas_phone || '').trim();
-    const ssn = (localPatient.bas_ssn || localPatient.bas_mrn || '').trim();
-    const typeOfId = (localPatient.bas_typeOfId && localPatient.bas_typeOfId !== 'SSN') ? localPatient.bas_typeOfId : 'NationalID';
+    const candidateId = (localPatient.bas_mrn || '').trim();
 
-    if (!mobile && !ssn) {
-      alert('Please enter Mobile Phone Number and National ID / SSN to verify.');
+    if (!candidateId) {
+      alert('Please enter Patient ID / MRN to look up patient summary.');
       return;
     }
     setVerifyingNile(true);
@@ -400,54 +398,42 @@ export const PatientForm: React.FC = () => {
     setNileRawResponse(null);
 
     try {
-      const res = await verifyPatientNileApi({
-        mobile: mobile,
-        typeOfIdentification: 'SSN',
-        identificationNumber: ssn,
+      const res = await fetchNilePersonalSummary({
+        patientID: candidateId,
       });
 
-      console.log('Nile API verification response:', res);
+      console.log('Nile API personal-summary response:', res);
       setNileRawResponse(res);
 
-      if (res.status === 'success') {
-        const nileStatus = res.data?.status || res.data?.data?.status || '';
-        const pData = res.data?.patientdata || res.data?.patientData || res.data?.data?.patientdata || res.data?.data?.patientData || {};
+      if (res.status === 'success' && res.data) {
+        const pData = res.data;
 
-        const isUnverified = nileStatus === 'unVerified' || nileStatus === 'unverified' || (!pData.patientID && !pData.idNumber && !pData.firstNameAr && !pData.firstNameEn);
+        // Extract full name (Arabic preferred, fallback English)
+        const nameAr = (pData.PatientNameAr || '').trim();
+        const nameEn = (pData.PatientNameEn || '').trim();
+        const fullName = nameAr || nameEn || '';
 
-        if (isUnverified) {
-          // Keep entered phone & SSN in the form so coordinator doesn't need to retype
-          setLocalPatient(prev => ({
-            ...prev,
-            bas_phone: mobile || prev.bas_phone,
-            bas_ssn: ssn || prev.bas_ssn,
-          }));
-          setDirty(true);
+        const mrnVal = (pData.PatientID || '').trim();
+        const ssnVal = (pData.IDNumber || '').trim();
 
+        // Check if patient was actually found or returned all nulls
+        if (!mrnVal && !ssnVal && !fullName) {
           setNileVerificationStatus({
             success: false,
-            message: 'Patient NOT registered in Nile Alamal database. Mobile & National ID preserved for manual entry below.',
+            message: 'Patient NOT registered in Nile Alamal database.',
           });
           return;
         }
 
-        // Extract full name (Arabic preferred, fallback English)
-        const nameAr = [pData.firstNameAr, pData.secondNameAr, pData.thirdNameAr, pData.fourthNameAr].filter(Boolean).join(' ');
-        const nameEn = [pData.firstNameEn, pData.secondNameEn, pData.thirdNameEn, pData.fourthNameEn].filter(Boolean).join(' ');
-        const fullName = nameAr || nameEn || pData.fullName || pData.name || '';
-
-        const mrnVal = pData.patientID ? String(pData.patientID) : '';
-        const ssnVal = pData.idNumber || ssn;
-        
-        // Gender mapping (M -> male, F -> female)
-        const genderStr = (pData.gender || '').toString().toLowerCase();
+        // Gender mapping (F -> female, M -> male)
+        const genderStr = (pData.Gender || '').toString().toLowerCase().trim();
         const genderVal = genderStr.startsWith('f') || genderStr.includes('أنثى') ? 'female' :
                           genderStr.startsWith('m') || genderStr.includes('ذكر') ? 'male' : '';
 
-        // Date of birth parsing (e.g. "11/11/2002 00:00:00" -> "2002-11-11")
+        // Date of birth parsing (e.g. "01/10/2022 00:00:00" -> "2022-10-01")
         let dobVal = '';
-        if (pData.dateOfBirth) {
-          const rawDob = String(pData.dateOfBirth).trim();
+        if (pData.DateOfBirth) {
+          const rawDob = String(pData.DateOfBirth).trim();
           if (rawDob.includes('/')) {
             const datePart = rawDob.split(' ')[0];
             const parts = datePart.split('/');
@@ -466,81 +452,55 @@ export const PatientForm: React.FC = () => {
           }
         }
 
-        // Extract phone numbers from contactMethods if present
-        let contactPhone = mobile;
-        let contactPhone2 = '';
-        if (Array.isArray(pData.contactMethods)) {
-          const phones = pData.contactMethods.map((c: any) => c.value || c.phoneNumber || c.number || c).filter(Boolean);
-          if (phones[0]) contactPhone = String(phones[0]);
-          if (phones[1]) contactPhone2 = String(phones[1]);
+        // Egyptian governorate code mapping from National ID digits 8 and 9
+        const govCodes: Record<string, string> = {
+          '01': 'Cairo', '02': 'Alexandria', '03': 'Port Said', '04': 'Suez',
+          '11': 'Damietta', '12': 'Dakahlia', '13': 'Sharkia', '14': 'Qaliubiya',
+          '15': 'Kafr Al-Sheikh', '16': 'Gharbiya', '17': 'Menofia', '18': 'Beheira',
+          '19': 'Ismailia', '21': 'Giza', '22': 'Beni Suef', '23': 'Fayoum',
+          '24': 'Minya', '25': 'Assiut', '26': 'Sohag', '27': 'Qena',
+          '28': 'Aswan', '29': 'Luxor', '31': 'Red Sea', '32': 'New Valley',
+          '33': 'Matrouh', '34': 'North Sinai', '35': 'South Sinai', '88': 'Outside Egypt'
+        };
+
+        let govVal = '';
+        if (ssnVal && ssnVal.length === 14) {
+          const code = ssnVal.substring(7, 9);
+          govVal = govCodes[code] || '';
         }
 
-        // Governorate mapping
-        let govVal = '';
-        const govRaw = pData.address?.governorateAr || pData.address?.governorateEn || pData.governorate || '';
-        const govMap: Record<string, string> = {
-          'الاسكندريه': 'Alexandria',
-          'الأسكندرية': 'Alexandria',
-          'القاهرة': 'Cairo',
-          'الجيزة': 'Giza',
-          'الدقهلية': 'Dakahlia',
-          'البحيرة': 'Beheira',
-          'الغربية': 'Gharbiya',
-          'الشرقية': 'Sharkia',
-          'المنوفية': 'Menofia',
-          'القليوبية': 'Qaliubiya',
-          'كفر الشيخ': 'Kafr Al-Sheikh',
-          'دمياط': 'Damietta',
-          'بورسعيد': 'Port Said',
-          'الإسماعيلية': 'Ismailia',
-          'السويس': 'Suez',
-          'الفيوم': 'Fayoum',
-          'بني سويف': 'Beni Suef',
-          'المنيا': 'Minya',
-          'أسيوط': 'Assiut',
-          'سوهاج': 'Sohag',
-          'قنا': 'Qena',
-          'الأقصر': 'Luxor',
-          'أسوان': 'Aswan',
-          'مطروح': 'Matrouh',
-          'الوادي الجديد': 'New Valley',
-          'البحر الأحمر': 'Red Sea',
-          'شمال سيناء': 'North Sinai',
-          'جنوب سيناء': 'South Sinai',
-        };
-        govVal = govMap[govRaw] || govRaw || '';
-
-        // Blood group mapping if available from API
-        const bloodVal = pData.bloodGroup || pData.bloodType || pData.blood_group || pData.blood || '';
+        const phone1 = (pData.Phone1 || '').trim();
+        const phone2 = (pData.Phone2 || '').trim();
+        const ageVal = (pData.Age || '').trim();
 
         setLocalPatient(prev => ({
           ...prev,
           bas_name: fullName || prev.bas_name,
-          bas_mrn: mrnVal || prev.bas_mrn,
+          bas_mrn: mrnVal || prev.bas_mrn || candidateId,
           bas_ssn: ssnVal || prev.bas_ssn,
           bas_gender: genderVal || prev.bas_gender,
           bas_dob: dobVal || prev.bas_dob,
+          bas_age: ageVal || prev.bas_age,
           bas_gov: govVal || prev.bas_gov,
-          bas_blood: bloodVal || prev.bas_blood,
-          bas_phone: contactPhone || prev.bas_phone,
-          bas_phone2: contactPhone2 || prev.bas_phone2,
+          bas_phone: phone1 || prev.bas_phone,
+          bas_phone2: phone2 || prev.bas_phone2,
         }));
         setDirty(true);
 
         setNileVerificationStatus({
           success: true,
-          message: `Verified: ${fullName} (MRN: ${mrnVal || ssnVal}) - Data auto-filled!`,
+          message: `Loaded: ${fullName} (MRN: ${mrnVal || candidateId}${ssnVal ? `, National ID: ${ssnVal}` : ''}) - Demographics auto-filled!`,
         });
       } else {
         setNileVerificationStatus({
           success: false,
-          message: res.message || 'Patient verification failed.',
+          message: res.message || 'Patient lookup failed.',
         });
       }
     } catch (err: any) {
       setNileVerificationStatus({
         success: false,
-        message: err.message || 'Verification failed. Please check network/credentials.',
+        message: err.message || 'Lookup failed. Please check network/credentials.',
       });
     } finally {
       setVerifyingNile(false);
@@ -1982,36 +1942,31 @@ export const PatientForm: React.FC = () => {
                     </div>
                     <div>
                       <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                        Nile Alamal Hospital Patient ID Verification
+                        Nile Alamal Hospital Patient Summary Lookup
                       </h4>
                       <p style={{ margin: '2px 0 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                        Enter the patient's Mobile Phone and National ID to verify official hospital records and auto-fill demographics.
+                        Enter the Patient ID / MRN to fetch official hospital records from Nile HIS and auto-fill demographics.
                       </p>
                     </div>
                   </div>
 
-                  <div className="form-grid">
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label>Mobile Phone Number *</label>
-                      <input 
-                        type="tel"
-                        id="bas_phone"
-                        placeholder="e.g. 01008365961"
-                        value={localPatient.bas_phone || ''}
-                        onChange={handleFormChange}
-                      />
-                    </div>
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label>National ID / Identification Number *</label>
-                      <input 
-                        type="text" 
-                        id="bas_ssn" 
-                        placeholder="e.g. 30211118800333"
-                        value={localPatient.bas_ssn || localPatient.bas_mrn || ''}
-                        onChange={handleFormChange}
-                      />
-                    </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Patient ID / MRN *</label>
+                    <input 
+                      type="text" 
+                      id="bas_mrn" 
+                      placeholder="e.g. 20250883 or 30211118800333"
+                      value={localPatient.bas_mrn || ''}
+                      onChange={handleFormChange}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleVerifyNilePatient();
+                        }
+                      }}
+                    />
                   </div>
+
 
                   <div style={{
                     display: 'flex',
@@ -2028,10 +1983,10 @@ export const PatientForm: React.FC = () => {
                         onClick={handleVerifyNilePatient}
                         disabled={verifyingNile}
                         className="btn btn-primary"
-                        style={{ minWidth: 160 }}
+                        style={{ minWidth: 180 }}
                       >
                         {verifyingNile ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
-                        <span>{verifyingNile ? 'Verifying with Nile...' : 'Verify Patient'}</span>
+                        <span>{verifyingNile ? 'Fetching Patient Data...' : 'Fetch Patient Summary'}</span>
                       </button>
                     </div>
 

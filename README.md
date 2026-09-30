@@ -9,6 +9,7 @@ The solution is built with a modern, high-performance architecture:
 - **Backend**: Laravel (PHP 8.3) RESTful API with Eloquent ORM & Sanctum Token Authentication
 - **Frontend**: React 18 with TypeScript, Vite, Vanilla CSS design system, Lucide Icons
 - **Database**: MySQL 8.0 with dedicated departmental schema tables and pivot relationships
+- **Hospital HIS Integration**: Direct bi-directional integration with Nile Alamal Hospital Information System (HIS) for real-time demographics auto-fill and patient visit timeline history
 - **Web Server**: Windows Server with IIS (URL Rewrite & ARR modules)
 
 ---
@@ -53,12 +54,19 @@ Architected with dedicated department tables and seamless pivot mappings:
 - **Ophthalmology Clinic (`dept_ophthalmology`)**
 - **Plastic & Craniofacial (`dept_plastic`)**
 
-### 📊 5. Analytics & Clinical Workload Insights
+### 🏥 5. Nile Hospital Information System (HIS) Integration
+- **Personal Summary Auto-Fill (`/api/nile/personal-summary`)**: Instant demographics lookup directly from Nile Alamal Hospital HIS via `patientID` (accepts MRN or National ID). Automatically populates Arabic/English names, National ID, Age, Date of Birth, Gender, Primary and Secondary Phone Numbers, Governorate/Nationality, Religion, and Marital Status.
+- **Streamlined Single-Input Form**: Simplified patient intake workflow eliminating redundant identification inputs; users can simply enter the Patient ID / MRN and press Enter to auto-populate all demographics.
+- **Complete Patient Visit History (`/api/nile/patient-visits`)**: Fetches full visit logs without truncation—including past clinic consultations and upcoming/scheduled future visits—with visit number, type, dates, clinic name, doctor, and specialty.
+- **Automatic Database Synchronization**: Automatically persists visits directly into `cases.patient_visits` (JSON column) whenever visits are fetched for existing cases or when submitting a case form.
+- **55-Minute Token Caching**: Transparent OAuth token lifecycle management in `NileApiService` to prevent redundant authentication overhead while maintaining 100% uptime with the hospital network.
+
+### 📊 6. Analytics & Clinical Workload Insights
 - Real-time case distribution charts across specialties.
 - Alarms breakdown, stalled case monitoring, and surgery pipeline analytics.
 - Departmental workload and surgical readiness metrics.
 
-### 🛡️ 6. Session Security & API Resilience
+### 🛡️ 7. Session Security & API Resilience
 - **Automated 401 Session Interceptor**: Handles expired or invalid tokens seamlessly with automatic logout and redirect.
 - **Structured Error Handling**: Unified JSON exception handling across all Laravel API endpoints.
 - **IIS Production Routing**: Built-in `web.config` rewrite rules for client-side SPA routing and backend proxying.
@@ -78,12 +86,16 @@ Master_Hub/
 │   ├── app/
 │   │   ├── Http/Controllers/
 │   │   │   ├── AuthController.php          # Login, Register, User Management
-│   │   │   └── CasesController.php         # Complete Case CRUD, Filters, Dept Sync
-│   │   └── Models/
-│   │       ├── CASES.php                   # Master Case model & accessors
-│   │       ├── Department.php              # Department dictionary model
-│   │       ├── User.php                    # User model with multi-department roles
-│   │       └── Dept/                       # 20 Individual Department models
+│   │   │   ├── CasesController.php         # Complete Case CRUD, Filters, Dept Sync
+│   │   │   ├── NileVerificationController.php # Nile HIS Personal Summary & Visits
+│   │   │   └── UserController.php          # Admin user management
+│   │   ├── Models/
+│   │   │   ├── CASES.php                   # Master Case model & accessors
+│   │   │   ├── Department.php              # Department dictionary model
+│   │   │   ├── User.php                    # User model with multi-department roles
+│   │   │   └── Dept/                       # 20 Individual Department models
+│   │   └── Services/
+│   │       └── NileApiService.php          # Nile Alamal HIS HTTP client & token cache
 │   ├── database/
 │   │   ├── migrations/                     # Schema migrations
 │   │   └── seeders/                        # Department & demo case seeders
@@ -104,7 +116,7 @@ Master_Hub/
 │   │   ├── context/
 │   │   │   └── AppContext.tsx              # Global state, Auth, Cases provider
 │   │   ├── utils/
-│   │   │   ├── api.ts                      # Axios client with interceptors
+│   │   │   ├── api.ts                      # Axios/fetch client with interceptors
 │   │   │   ├── apiMapper.ts                # Snake_case <-> camelCase transformer
 │   │   │   └── departmentsData.ts          # Department registry & form metadata
 │   │   ├── index.css                       # Vanilla CSS clinical design system
@@ -125,6 +137,19 @@ Master_Hub/
 
 ---
 
+## 📡 Nile HIS API Endpoints Reference
+
+The platform integrates with Nile Alamal Hospital's backend (`http://10.2.2.41/KsiApi`):
+
+| Endpoint | Method | Payload | Description |
+| :--- | :---: | :--- | :--- |
+| `/api/nile/personal-summary` | `POST` | `{"patientID": "20250883"}` | Fetches patient demographics (names, age, DOB, phones, national ID) from HIS. |
+| `/api/nile/patient-visits` | `POST` | `{"patientID": "20250883"}` | Returns all visits (past + upcoming) in raw format `{"visits": [...], "error": null}` and auto-saves to DB. |
+| `/api/nile/sync-patient-visits` | `POST` | `{"patientID": "20250883"}` or `{"case_id": 3}` | Synchronizes visits and returns updated case record. |
+| `/api/nile/verify-patient` | `POST` | `{"patientID": "20250883"}` | Legacy endpoint maintained for backwards compatibility. |
+
+---
+
 ## 🚀 Getting Started
 
 ### Prerequisites
@@ -133,6 +158,15 @@ Master_Hub/
 - **Composer**
 - **MySQL 8.0**
 - **IIS** (Windows Server) with URL Rewrite & Application Request Routing (ARR) modules
+
+---
+
+### Database Update for Patient Visits
+To support storing hospital visits history locally, execute this SQL statement on your database:
+
+```sql
+ALTER TABLE `cases` ADD COLUMN `patient_visits` JSON NULL AFTER `programs`;
+```
 
 ---
 
@@ -145,11 +179,15 @@ cd Backend-laravel
 # Create environment file
 cp .env.example .env
 
-# Configure database credentials in .env
+# Configure database & Nile HIS credentials in .env:
 # DB_HOST=127.0.0.1
 # DB_DATABASE=master_hub
 # DB_USERNAME=root
 # DB_PASSWORD=your_password
+#
+# NILE_API_BASE_URL=http://10.2.2.41/KsiApi
+# NILE_API_USERNAME=your_username
+# NILE_API_PASSWORD=your_password
 
 # Install PHP dependencies
 composer install
