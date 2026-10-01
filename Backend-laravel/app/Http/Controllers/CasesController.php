@@ -9,6 +9,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Schema;
+use App\Services\NileApiService;
+use Carbon\Carbon;
 
 class CasesController extends Controller
 {
@@ -283,6 +285,123 @@ class CasesController extends Controller
         $case->load(self::$deptRelations);
         $case->past_surgeries = $case->research['past_surgeries'] ?? [];
         return response()->json($case);
+    }
+
+    /**
+     * Patient Portal (PP) Integration endpoint (PCC_integrate_with_PP).
+     * Authenticates using mrn, national_id, and date_of_birth.
+     * Returns the patient's personal data and all visits (live from Nile HIS + DB).
+     *
+     * @param Request $request
+     * @param NileApiService $nileService
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function pccIntegrateWithPP(Request $request, NileApiService $nileService)
+    {
+        $mrn = trim((string)($request->input('mrn') ?? ''));
+        $nationalId = trim((string)($request->input('national_id') ?? $request->input('nationalId') ?? ''));
+        $dobInput = trim((string)($request->input('date_of_birth') ?? $request->input('dateOfBirth') ?? $request->input('dob') ?? ''));
+
+        if ($mrn === '' || $nationalId === '' || $dobInput === '') {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Authentication failed. mrn, national_id, and date_of_birth are required.',
+            ], 422);
+        }
+
+        // Normalize date_of_birth to YYYY-MM-DD
+        try {
+            $dobParsed = Carbon::parse($dobInput)->toDateString();
+        } catch (\Throwable $e) {
+            $dobParsed = $dobInput;
+        }
+
+        // Authenticate patient: check mrn, national_id, and date_of_birth in cases table
+        $query = Cases::where('mrn', $mrn)
+            ->where('national_id', $nationalId);
+
+        $query->where(function ($q) use ($dobParsed, $dobInput) {
+            $q->whereDate('date_of_birth', $dobParsed)
+              ->orWhere('date_of_birth', 'like', $dobParsed . '%');
+            if ($dobInput !== $dobParsed) {
+                $q->orWhere('date_of_birth', 'like', $dobInput . '%');
+            }
+        });
+
+        $case = $query->first();
+
+        if (!$case) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Authentication failed. No matching patient record found for the provided credentials.',
+            ], 401);
+        }
+
+        // Fetch ALL visits for this patient (including upcoming) from Nile HIS
+        $allVisits = [];
+        try {
+            $lookupId = $case->mrn ?: $case->national_id;
+            $nileVisitsRes = $nileService->getPatientVisits($lookupId);
+            if (!empty($nileVisitsRes['success']) && isset($nileVisitsRes['data']['visits'])) {
+                $allVisits = $nileVisitsRes['data']['visits'];
+                if (Schema::hasColumn('cases', 'patient_visits')) {
+                    $case->update(['patient_visits' => $allVisits]);
+                }
+
+                // Also sync with dedicated patient_visits relational table
+                if (Schema::hasTable('patient_visits')) {
+                    foreach ($allVisits as $v) {
+                        \App\Models\PatientVisit::updateOrCreate(
+                            [
+                                'case_id'          => $case->id,
+                                'visit_number'     => $v['visitNumber'] ?? null,
+                                'visit_start_date' => $v['visitStartdate'] ?? null,
+                            ],
+                            [
+                                'mrn'                 => (string) $case->mrn,
+                                'visit_type_ar'       => $v['visitTypeAr'] ?? null,
+                                'visit_type_en'       => $v['visitTypeEn'] ?? null,
+                                'visit_end_date'      => $v['visitEnddate'] ?? null,
+                                'place_name_ar'       => $v['placeNameAr'] ?? null,
+                                'place_name_en'       => $v['placeNameEn'] ?? null,
+                                'doctor_name_ar'      => $v['doctorNameAr'] ?? null,
+                                'doctor_name_en'      => $v['doctorNameEn'] ?? null,
+                                'doctor_specialty_ar' => $v['doctorSpecialtyAr'] ?? null,
+                                'doctor_specialty_en' => $v['doctorSpecialtyEn'] ?? null,
+                            ]
+                        );
+                    }
+                }
+            } else {
+                $allVisits = $case->patient_visits ?? [];
+            }
+        } catch (\Throwable $e) {
+            $allVisits = $case->patient_visits ?? [];
+        }
+
+        if (empty($allVisits) && !empty($case->patient_visits)) {
+            $allVisits = $case->patient_visits;
+        }
+
+        return response()->json([
+            'id'                      => $case->id,
+            'mrn'                     => (string) $case->mrn,
+            'full_name'               => (string) $case->full_name,
+            'gender'                  => (string) $case->gender,
+            'national_id'             => (string) $case->national_id,
+            'date_of_birth'           => $case->date_of_birth ? $case->date_of_birth->format('Y-m-d') : $dobParsed,
+            'age'                     => $case->age !== null ? (int) $case->age : null,
+            'phone_number'            => $case->phone_number,
+            'government'              => $case->government,
+            'outside_egypt_details'   => $case->outside_egypt_details,
+            'blood_group'             => $case->blood_group,
+            'motor_problem'           => $case->motor_problem,
+            'motor_problem_detail'    => $case->motor_problem_detail,
+            'date_of_joining_request' => $case->date_of_joining_request ? $case->date_of_joining_request->format('Y-m-d') : null,
+            'cause_of_acceptance'     => $case->cause_of_acceptance,
+            'general_medical_history' => $case->general_medical_history,
+            'patient_visits'          => is_array($allVisits) ? $allVisits : [],
+        ], 200);
     }
 
     // func to update a specific case.

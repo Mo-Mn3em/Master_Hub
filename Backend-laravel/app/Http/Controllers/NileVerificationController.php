@@ -125,6 +125,30 @@ class NileVerificationController extends Controller
 
                 if ($case) {
                     $case->update(['patient_visits' => $visits]);
+
+                    if (\Illuminate\Support\Facades\Schema::hasTable('patient_visits')) {
+                        foreach ($visits as $v) {
+                            \App\Models\PatientVisit::updateOrCreate(
+                                [
+                                    'case_id'          => $case->id,
+                                    'visit_number'     => $v['visitNumber'] ?? null,
+                                    'visit_start_date' => $v['visitStartdate'] ?? null,
+                                ],
+                                [
+                                    'mrn'                 => (string) $case->mrn,
+                                    'visit_type_ar'       => $v['visitTypeAr'] ?? null,
+                                    'visit_type_en'       => $v['visitTypeEn'] ?? null,
+                                    'visit_end_date'      => $v['visitEnddate'] ?? null,
+                                    'place_name_ar'       => $v['placeNameAr'] ?? null,
+                                    'place_name_en'       => $v['placeNameEn'] ?? null,
+                                    'doctor_name_ar'      => $v['doctorNameAr'] ?? null,
+                                    'doctor_name_en'      => $v['doctorNameEn'] ?? null,
+                                    'doctor_specialty_ar' => $v['doctorSpecialtyAr'] ?? null,
+                                    'doctor_specialty_en' => $v['doctorSpecialtyEn'] ?? null,
+                                ]
+                            );
+                        }
+                    }
                 }
             }
 

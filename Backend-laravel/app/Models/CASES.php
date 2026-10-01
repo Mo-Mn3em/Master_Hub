@@ -90,6 +90,14 @@ class Cases extends Model
         return $this->belongsToMany(Department::class, 'case_department', 'case_id', 'department_id')->withTimestamps();
     }
 
+    /**
+     * Relational visits stored in patient_visits table.
+     */
+    public function visits()
+    {
+        return $this->hasMany(PatientVisit::class, 'case_id');
+    }
+
     // 20 HasOne Relationships to Dedicated Department Tables
     public function deptAnesthesia()          { return $this->hasOne(Dept\DeptAnesthesia::class, 'case_id'); }
     public function deptSpinalSurgery()       { return $this->hasOne(Dept\DeptSpinalSurgery::class, 'case_id'); }

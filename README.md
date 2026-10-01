@@ -92,6 +92,7 @@ Master_Hub/
 │   │   ├── Models/
 │   │   │   ├── CASES.php                   # Master Case model & accessors
 │   │   │   ├── Department.php              # Department dictionary model
+│   │   │   ├── PatientVisit.php            # Relational patient visits model
 │   │   │   ├── User.php                    # User model with multi-department roles
 │   │   │   └── Dept/                       # 20 Individual Department models
 │   │   └── Services/
@@ -147,6 +148,7 @@ The platform integrates with Nile Alamal Hospital's backend (`http://10.2.2.41/K
 | `/api/nile/patient-visits` | `POST` | `{"patientID": "20250883"}` | Returns all visits (past + upcoming) in raw format `{"visits": [...], "error": null}` and auto-saves to DB. |
 | `/api/nile/sync-patient-visits` | `POST` | `{"patientID": "20250883"}` or `{"case_id": 3}` | Synchronizes visits and returns updated case record. |
 | `/api/nile/verify-patient` | `POST` | `{"patientID": "20250883"}` | Legacy endpoint maintained for backwards compatibility. |
+| `/api/PCC_integrate_with_PP` | `POST` | `{"mrn": "...", "national_id": "...", "date_of_birth": "..."}` | Patient Portal (PP) live integration endpoint. Authenticates patient using 3 credentials and returns full demographics plus complete visits timeline. |
 
 ---
 
@@ -161,11 +163,39 @@ The platform integrates with Nile Alamal Hospital's backend (`http://10.2.2.41/K
 
 ---
 
-### Database Update for Patient Visits
-To support storing hospital visits history locally, execute this SQL statement on your database:
+### Database Setup for Patient Visits
+To support storing hospital visits history locally, execute these SQL statements on your database:
 
 ```sql
+-- 1. Add JSON column to cases table (if not already present)
 ALTER TABLE `cases` ADD COLUMN `patient_visits` JSON NULL AFTER `programs`;
+
+-- 2. Create composite index for instantaneous 3-field patient portal authentication
+CREATE INDEX `idx_cases_pp_auth` ON `cases` (`mrn`, `national_id`, `date_of_birth`);
+
+-- 3. Dedicated relational table for visits history
+CREATE TABLE IF NOT EXISTS `patient_visits` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `case_id` BIGINT UNSIGNED NOT NULL,
+  `mrn` VARCHAR(255) NOT NULL,
+  `visit_number` INT DEFAULT NULL,
+  `visit_type_ar` VARCHAR(255) DEFAULT NULL,
+  `visit_type_en` VARCHAR(255) DEFAULT NULL,
+  `visit_start_date` VARCHAR(100) DEFAULT NULL,
+  `visit_end_date` VARCHAR(100) DEFAULT NULL,
+  `place_name_ar` VARCHAR(255) DEFAULT NULL,
+  `place_name_en` VARCHAR(255) DEFAULT NULL,
+  `doctor_name_ar` VARCHAR(255) DEFAULT NULL,
+  `doctor_name_en` VARCHAR(255) DEFAULT NULL,
+  `doctor_specialty_ar` VARCHAR(255) DEFAULT NULL,
+  `doctor_specialty_en` VARCHAR(255) DEFAULT NULL,
+  `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `fk_patient_visits_case_id` (`case_id`),
+  KEY `idx_patient_visits_mrn` (`mrn`),
+  CONSTRAINT `fk_patient_visits_case_id` FOREIGN KEY (`case_id`) REFERENCES `cases` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
 ---

@@ -29,6 +29,10 @@ Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
+// ── Patient Portal (PP) Integration ──────────────────────────────────────────
+Route::match(['get', 'post'], 'PCC_integrate_with_PP', [CasesController::class, 'pccIntegrateWithPP']);
+Route::match(['get', 'post'], 'pcc_integrate_with_pp', [CasesController::class, 'pccIntegrateWithPP']);
+
 // Custom case endpoints (must come before apiResource so 'filter' isn't parsed as a {case} ID)
 Route::get('case/filter', [CasesController::class, 'filter']);
 Route::post('case/bulkStore', [CasesController::class, 'bulkStore']);
